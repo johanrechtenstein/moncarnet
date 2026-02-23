@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TonEntretienAuto - Récapitulatif Échéances Temporelles</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-left: 4px solid #3498db;
+        }
+        h3 {
+            color: #2980b9;
+            margin-top: 20px;
+        }
+        .section {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .important {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .code-block {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .alert-green { background-color: #d4edda; border-left: 4px solid #28a745; }
+        .alert-orange { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        .alert-red { background-color: #f8d7da; border-left: 4px solid #dc3545; }
+        .alert-red-pulse { background-color: #f8d7da; border-left: 4px solid #dc3545; font-weight: bold; }
+        ul {
+            line-height: 1.8;
+        }
+        .example-ui {
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚗 TonEntretienAuto - Système d'Échéances Temporelles</h1>
+    <p><strong>Date :</strong> Février 2026 | <strong>Document :</strong> Récapitulatif pour MCD/MLD/MPD</p>
+
+    <div class="section">
+        <h2>1. Contexte et Problématique</h2>
+        <p>Le système d'alertes initial ne prenait en compte que le <strong>kilométrage</strong>. Or, dans la réalité :</p>
+        <ul>
+            <li>Les constructeurs recommandent : "Vidange tous les 15 000 km <strong>OU 1 an</strong> (le premier atteint)"</li>
+            <li>Les fluides et pièces se dégradent avec le temps, même sans rouler</li>
+            <li>Certains entretiens sont purement temporels (contrôle technique tous les 2 ans)</li>
+            <li>Un utilisateur roulant peu (5 000 km/an) ne serait jamais alerté</li>
+        </ul>
+        
+        <div class="important">
+            <strong>🎯 Solution retenue :</strong> Système de double échéance (kilométrique ET temporelle), toutes deux facultatives.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>2. Structure de Base de Données</h2>
+        
+        <h3>2.1 Table MAINTENANCES (Entretiens)</h3>
+        <div class="code-block">
+CREATE TABLE maintenances (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  vehicle_id INT NOT NULL,
+  type VARCHAR(100) NOT NULL,
+  date DATE NOT NULL,
+  kilometrage INT NOT NULL,
+  prix DECIMAL(10,2),
+  pieces_utilisees TEXT,
+  
+  -- Intervalles (facultatifs)
+  intervalle_km INT,                     -- Ex: 15000
+  intervalle_mois INT,                   -- Ex: 12 (= 1 an)
+  
+  -- Échéances calculées automatiquement
+  prochaine_echeance_km INT,             -- Ex: 65000
+  prochaine_echeance_date DATE,          -- Ex: 2027-01-15
+  
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+);
+        </div>
+
+        <h3>2.2 Table VEHICLES (Véhicules)</h3>
+        <div class="code-block">
+CREATE TABLE vehicles (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  marque VARCHAR(100) NOT NULL,
+  modele VARCHAR(100) NOT NULL,
+  immatriculation VARCHAR(20),           -- Facultatif
+  kilometrage_actuel INT NOT NULL,       -- 👈 Important pour le calcul des alertes
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+        </div>
+
+        <h3>2.3 Relations</h3>
+        <ul>
+            <li><strong>users</strong> ➜ <strong>vehicles</strong> : One-to-Many (un utilisateur possède plusieurs véhicules)</li>
+            <li><strong>vehicles</strong> ➜ <strong>maintenances</strong> : One-to-Many (un véhicule a plusieurs entretiens)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>3. Valeurs par Défaut des Intervalles</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Type d'entretien</th>
+                    <th>Icône</th>
+                    <th>Intervalle KM</th>
+                    <th>Intervalle Mois</th>
+                    <th>Commentaire</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Vidange</td>
+                    <td>🛢️</td>
+                    <td>15 000</td>
+                    <td>12</td>
+                    <td>Standard essence/diesel</td>
+                </tr>
+                <tr>
+                    <td>Distribution</td>
+                    <td>⚙️</td>
+                    <td>100 000</td>
+                    <td>72 (6 ans)</td>
+                    <td>Courroie/chaîne</td>
+                </tr>
+                <tr>
+                    <td>Freins</td>
+                    <td>🔴</td>
+                    <td>40 000</td>
+                    <td>36 (3 ans)</td>
+                    <td>Plaquettes et disques</td>
+                </tr>
+                <tr>
+                    <td>Révision complète</td>
+                    <td>🔧</td>
+                    <td>30 000</td>
+                    <td>24 (2 ans)</td>
+                    <td>Contrôle général</td>
+                </tr>
+                <tr>
+                    <td>Pneus</td>
+                    <td>🛞</td>
+                    <td>50 000</td>
+                    <td>60 (5 ans)</td>
+                    <td>Selon usure</td>
+                </tr>
+                <tr>
+                    <td>Filtres</td>
+                    <td>🌬️</td>
+                    <td>30 000</td>
+                    <td>12</td>
+                    <td>Air, habitacle, carburant</td>
+                </tr>
+                <tr>
+                    <td>Climatisation</td>
+                    <td>❄️</td>
+                    <td><em>null</em></td>
+                    <td>24 (2 ans)</td>
+                    <td><strong>Uniquement temporel</strong></td>
+                </tr>
+                <tr>
+                    <td>Contrôle technique</td>
+                    <td>📋</td>
+                    <td><em>null</em></td>
+                    <td>24 (2 ans)</td>
+                    <td><strong>Uniquement temporel</strong></td>
+                </tr>
+                <tr>
+                    <td>Autre</td>
+                    <td>🔧</td>
+                    <td>15 000</td>
+                    <td>12</td>
+                    <td>Personnalisable</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="important">
+            <strong>Note :</strong> Ces valeurs sont des <strong>propositions par défaut</strong>. L'utilisateur peut les modifier selon les préconisations de son constructeur.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>4. Calcul des Échéances</h2>
+        
+        <h3>4.1 À la Création de l'Entretien</h3>
+        <div class="code-block">
+// Exemple : Vidange du 15/01/2026 à 50 000 km
+// Utilisateur saisit : intervalle_km = 15000, intervalle_mois = 12
+
+// Calculs automatiques :
+prochaine_echeance_km = 50000 + 15000 = 65000
+prochaine_echeance_date = 2026-01-15 + 12 mois = 2027-01-15
+
+// Stockage en BDD :
+INSERT INTO maintenances VALUES (
+  ...,
+  intervalle_km = 15000,
+  intervalle_mois = 12,
+  prochaine_echeance_km = 65000,
+  prochaine_echeance_date = '2027-01-15'
+);
+        </div>
+
+        <h3>4.2 Fonction de Calcul de l'État</h3>
+        <div class="code-block">
+function calculerEtatEntretien(entretien, kmActuel, dateActuelle) {
+  let couleurKm = 'vert';
+  let couleurDate = 'vert';
+  
+  // ===== ALERTE KILOMÉTRIQUE =====
+  if (entretien.prochaine_echeance_km !== null) {
+    const kmRestant = entretien.prochaine_echeance_km - kmActuel;
+    
+    if (kmRestant <= 0) {
+      couleurKm = 'rouge-pulse';    // Dépassé
+    } else if (kmRestant <= 200) {
+      couleurKm = 'rouge';           // Urgent (< 200 km)
+    } else if (kmRestant <= 2000) {
+      couleurKm = 'orange';          // À prévoir (< 2000 km)
+    }
+    // Sinon reste 'vert'
+  }
+  
+  // ===== ALERTE TEMPORELLE =====
+  if (entretien.prochaine_echeance_date !== null) {
+    const joursRestants = differenceEnJours(
+      entretien.prochaine_echeance_date, 
+      dateActuelle
+    );
+    
+    if (joursRestants <= 0) {
+      couleurDate = 'rouge-pulse';   // Dépassé
+    } else if (joursRestants <= 30) {
+      couleurDate = 'rouge';         // Urgent (< 1 mois)
+    } else if (joursRestants <= 60) {
+      couleurDate = 'orange';        // À prévoir (< 2 mois)
+    }
+    // Sinon reste 'vert'
+  }
+  
+  // ===== PRENDRE LA PLUS URGENTE =====
+  const priorites = ['vert', 'orange', 'rouge', 'rouge-pulse'];
+  const indexKm = priorites.indexOf(couleurKm);
+  const indexDate = priorites.indexOf(couleurDate);
+  
+  return priorites[Math.max(indexKm, indexDate)];
+}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>5. Seuils d'Alertes</h2>
+        
+        <h3>5.1 Alertes Kilométriques</h3>
+        <div class="alert alert-green">
+            🟢 <strong>VERT</strong> : Plus de 2 000 km avant l'échéance
+        </div>
+        <div class="alert alert-orange">
+            🟠 <strong>ORANGE</strong> : Entre 200 et 2 000 km avant l'échéance (environ 2-3 semaines à 1000 km/semaine)
+        </div>
+        <div class="alert alert-red">
+            🔴 <strong>ROUGE</strong> : Moins de 200 km avant l'échéance (environ 1 semaine)
+        </div>
+        <div class="alert alert-red-pulse">
+            🔴💥 <strong>ROUGE PULSÉ</strong> : Échéance dépassée (km actuel > prochaine échéance)
+        </div>
+
+        <h3>5.2 Alertes Temporelles</h3>
+        <div class="alert alert-green">
+            🟢 <strong>VERT</strong> : Plus de 2 mois avant l'échéance
+        </div>
+        <div class="alert alert-orange">
+            🟠 <strong>ORANGE</strong> : Entre 1 et 2 mois avant l'échéance
+        </div>
+        <div class="alert alert-red">
+            🔴 <strong>ROUGE</strong> : Moins de 1 mois avant l'échéance
+        </div>
+        <div class="alert alert-red-pulse">
+            🔴💥 <strong>ROUGE PULSÉ</strong> : Échéance dépassée (date actuelle > prochaine échéance)
+        </div>
+
+        <div class="important">
+            <strong>Règle finale :</strong> L'alerte affichée est <strong>la plus urgente des deux</strong>.
+            <br>
+            <strong>Exemple :</strong> Vidange prévue dans 500 km (🔴) OU dans 6 mois (🟢) → Affichage : 🔴
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>6. Cas d'Usage Spécifiques</h2>
+        
+        <h3>6.1 Entretien avec uniquement échéance temporelle</h3>
+        <p><strong>Exemple :</strong> Contrôle technique (obligatoire tous les 2 ans, pas lié au kilométrage)</p>
+        <div class="code-block">
+{
+  type: 'Contrôle technique',
+  date: '2024-02-17',
+  kilometrage: 45000,              // Kilométrage au moment du CT
+  intervalle_km: null,             // ❌ Pas d'échéance kilométrique
+  intervalle_mois: 24,
+  prochaine_echeance_km: null,
+  prochaine_echeance_date: '2026-02-17'
+}
+        </div>
+
+        <h3>6.2 Entretien avec uniquement échéance kilométrique</h3>
+        <p><strong>Exemple :</strong> Changement de pneus (uniquement selon l'usure, pas le temps)</p>
+        <div class="code-block">
+{
+  type: 'Pneus',
+  date: '2025-05-10',
+  kilometrage: 30000,
+  intervalle_km: 50000,
+  intervalle_mois: null,           // ❌ Pas d'échéance temporelle
+  prochaine_echeance_km: 80000,
+  prochaine_echeance_date: null
+}
+        </div>
+
+        <h3>6.3 Entretien avec double échéance</h3>
+        <p><strong>Exemple :</strong> Vidange (15 000 km OU 12 mois, le premier atteint)</p>
+        <div class="code-block">
+{
+  type: 'Vidange',
+  date: '2026-01-15',
+  kilometrage: 50000,
+  intervalle_km: 15000,            // ✅ Échéance kilométrique
+  intervalle_mois: 12,             // ✅ Échéance temporelle
+  prochaine_echeance_km: 65000,
+  prochaine_echeance_date: '2027-01-15'
+}
+        </div>
+
+        <h3>6.4 Entretien sans échéance (historique uniquement)</h3>
+        <p><strong>Exemple :</strong> Réparation ponctuelle (pas de récurrence prévue)</p>
+        <div class="code-block">
+{
+  type: 'Réparation embrayage',
+  date: '2025-08-20',
+  kilometrage: 75000,
+  intervalle_km: null,             // ❌ Pas de récurrence
+  intervalle_mois: null,           // ❌ Pas de récurrence
+  prochaine_echeance_km: null,
+  prochaine_echeance_date: null
+}
+// → Pas d'alerte générée, conservé uniquement dans l'historique
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>7. Interface Utilisateur</h2>
+        
+        <h3>7.1 Formulaire d'Ajout d'Entretien</h3>
+        <div class="example-ui">
+┌─────────────────────────────────────┐
+│ <strong>Ajouter un entretien</strong>                │
+│                                     │
+│ Type : [🛢️ Vidange ▾]               │
+│ Date : [15/01/2026]                 │
+│ Kilométrage : [50 000] km           │
+│ Prix : [80] € (facultatif)          │
+│ Pièces : [...] (facultatif)         │
+│                                     │
+│ ⚙️ <strong>Prochain entretien dans :</strong>        │
+│                                     │
+│ ☑ [15 000] km (recommandé)          │
+│    → Prochain à ~65 000 km          │
+│                                     │
+│ ☑ [12] mois (recommandé)            │
+│    → Prochain le ~15/01/2027        │
+│                                     │
+│ 💡 Le constructeur recommande       │
+│    généralement le premier atteint  │
+│                                     │
+│ [Enregistrer]                       │
+└─────────────────────────────────────┘
+        </div>
+
+        <h3>7.2 Page "Mon Garage"</h3>
+        <div class="example-ui">
+┌────────────────────────────────────────┐
+│ <strong>Mon Garage</strong>                             │
+├────────────────────────────────────────┤
+│ 🚗 <strong>Peugeot 206 - 2008</strong>       🟠         │
+│    88 000 km                           │
+│    ⚠️ Freins à prévoir dans 2 000 km   │
+│    [Voir les entretiens]               │
+├────────────────────────────────────────┤
+│ 🚗 <strong>Renault Clio - 2015</strong>      🟢         │
+│    45 000 km                           │
+│    ✅ Tous les entretiens OK           │
+│    [Voir les entretiens]               │
+└────────────────────────────────────────┘
+        </div>
+
+        <h3>7.3 Page "Entretiens du Véhicule"</h3>
+        <div class="example-ui">
+┌────────────────────────────────────────┐
+│ <strong>Peugeot 206 - 88 000 km</strong>                │
+│                                        │
+│ Kilométrage actuel :                   │
+│ [88 000] km  [📝 Modifier]             │
+├────────────────────────────────────────┤
+│ <strong>Prochains entretiens :</strong>                 │
+│                                        │
+│ 🟠 <strong>Freins</strong>                             │
+│    📍 Dans 2 000 km (90 000 km)        │
+│    📅 Dans 8 mois (12/10/2026)         │
+│    ⚠️ Échéance kilométrique proche     │
+│                                        │
+│ 🔴 <strong>Contrôle technique</strong>                 │
+│    📅 Dans 15 jours (17/02/2026)       │
+│    ⚠️ À prévoir rapidement             │
+│                                        │
+│ 🟢 <strong>Distribution</strong>                       │
+│    📍 Dans 62 000 km (150 000 km)      │
+│    📅 Dans 4 ans (15/01/2028)          │
+│    ✅ Tout va bien                     │
+├────────────────────────────────────────┤
+│ <strong>Historique :</strong>                           │
+│ ✅ 15/01/2026 - 88 000 km - Vidange    │
+│    (Prochaine : 103 000 km / 01/2027)  │
+│ ✅ 12/05/2024 - 50 000 km - Freins     │
+│    (Prochaine : 90 000 km / 05/2027)   │
+│ ✅ 03/02/2023 - 30 000 km - Vidange    │
+└────────────────────────────────────────┘
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>8. Logique de Mise à Jour</h2>
+        
+        <h3>8.1 Modification du Kilométrage Actuel</h3>
+        <p>Lorsque l'utilisateur met à jour le kilométrage de son véhicule :</p>
+        <ul>
+            <li>❌ Aucune modification en base de données des entretiens</li>
+            <li>✅ Recalcul en temps réel de tous les états d'alertes</li>
+            <li>✅ Affichage actualisé immédiatement</li>
+        </ul>
+
+        <h3>8.2 Modification d'un Entretien (sous 24h)</h3>
+        <p>L'utilisateur peut modifier tous les champs, y compris les intervalles :</p>
+        <div class="code-block">
+// Si modification de intervalle_km ou intervalle_mois
+// → Recalcul automatique des prochaines échéances
+
+UPDATE maintenances SET
+  intervalle_km = 12000,                    -- Modifié de 15000 à 12000
+  prochaine_echeance_km = kilometrage + 12000,
+  updated_at = NOW()
+WHERE id = 123;
+        </div>
+
+        <h3>8.3 Après 24h : Verrouillage</h3>
+        <ul>
+            <li>❌ Impossible de modifier l'entretien existant</li>
+            <li>✅ L'utilisateur peut créer une nouvelle ligne de correction (avec traçabilité)</li>
+            <li>✅ Ou créer un nouvel entretien avec les nouveaux intervalles</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>9. Points Importants pour le MCD/MLD/MPD</h2>
+        
+        <h3>Cardinalités</h3>
+        <ul>
+            <li><strong>User → Vehicle</strong> : 1,N (un utilisateur possède 1 à N véhicules)</li>
+            <li><strong>Vehicle → Maintenance</strong> : 0,N (un véhicule a 0 à N entretiens)</li>
+        </ul>
+
+        <h3>Contraintes</h3>
+        <ul>
+            <li><code>intervalle_km</code> et <code>intervalle_mois</code> peuvent être NULL (facultatifs)</li>
+            <li>Si <code>intervalle_km</code> est NULL → <code>prochaine_echeance_km</code> est NULL</li>
+            <li>Si <code>intervalle_mois</code> est NULL → <code>prochaine_echeance_date</code> est NULL</li>
+            <li><code>kilometrage_actuel</code> dans la table <code>vehicles</code> est obligatoire (NOT NULL)</li>
+            <li>Les échéances sont calculées automatiquement à l'insertion/modification</li>
+        </ul>
+
+        <h3>Index Recommandés</h3>
+        <div class="code-block">
+-- Pour optimiser les recherches
+CREATE INDEX idx_vehicle_id ON maintenances(vehicle_id);
+CREATE INDEX idx_user_id ON vehicles(user_id);
+CREATE INDEX idx_prochaine_echeance_date ON maintenances(prochaine_echeance_date);
+CREATE INDEX idx_prochaine_echeance_km ON maintenances(prochaine_echeance_km);
+        </div>
+
+        <h3>Triggers Potentiels (Optionnel)</h3>
+        <div class="code-block">
+-- Calcul automatique des échéances avant insertion
+CREATE TRIGGER calculate_echeances_before_insert
+BEFORE INSERT ON maintenances
+FOR EACH ROW
+BEGIN
+  IF NEW.intervalle_km IS NOT NULL THEN
+    SET NEW.prochaine_echeance_km = NEW.kilometrage + NEW.intervalle_km;
+  END IF;
+  
+  IF NEW.intervalle_mois IS NOT NULL THEN
+    SET NEW.prochaine_echeance_date = DATE_ADD(NEW.date, INTERVAL NEW.intervalle_mois MONTH);
+  END IF;
+END;
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>10. Récapitulatif pour le Cahier des Charges</h2>
+        
+        <div class="important">
+            <h3>MVP - Système d'alertes avec double échéance</h3>
+            
+            <p><strong>Chaque entretien peut définir deux types d'échéances (facultatives) :</strong></p>
+            <ul>
+                <li><strong>Échéance kilométrique</strong> : kilométrage + intervalle en km</li>
+                <li><strong>Échéance temporelle</strong> : date + intervalle en mois</li>
+            </ul>
+
+            <p><strong>Valeurs par défaut proposées :</strong></p>
+            <ul>
+                <li>Vidange : 15 000 km OU 12 mois</li>
+                <li>Distribution : 100 000 km OU 72 mois (6 ans)</li>
+                <li>Contrôle technique : 24 mois uniquement</li>
+            </ul>
+
+            <p><strong>Calcul de l'état :</strong></p>
+            <ul>
+                <li>🟢 Vert : Plus de 2 000 km OU 2 mois avant échéance</li>
+                <li>🟠 Orange : Entre 200 km et 2 000 km OU entre 1 et 2 mois</li>
+                <li>🔴 Rouge : Moins de 200 km OU moins de 1 mois</li>
+                <li>🔴💥 Rouge pulsé : Échéance dépassée</li>
+            </ul>
+
+            <p><strong>L'alerte affichée est la plus urgente des deux échéances.</strong></p>
+
+            <p><strong>L'utilisateur peut :</strong></p>
+            <ul>
+                <li>Activer/désactiver chaque type d'échéance via des checkboxes</li>
+                <li>Modifier les intervalles selon les préconisations constructeur</li>
+                <li>Ne définir aucune échéance (entretien sans alerte, historique seulement)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>11. Exemple Complet de Flux de Données</h2>
+        
+        <h3>Scénario : Jean ajoute une vidange</h3>
+        
+        <p><strong>1. Saisie utilisateur :</strong></p>
+        <ul>
+            <li>Type : Vidange</li>
+            <li>Date : 15/01/2026</li>
+            <li>Kilométrage : 50 000 km</li>
+            <li>Prix : 80€</li>
+            <li>Intervalle km : 15 000 km (coché)</li>
+            <li>Intervalle mois : 12 mois (coché)</li>
+        </ul>
+
+        <p><strong>2. Calcul back-end :</strong></p>
+        <div class="code-block">
+prochaine_echeance_km = 50000 + 15000 = 65000
+prochaine_echeance_date = '2026-01-15' + 12 mois = '2027-01-15'
+        </div>
+
+        <p><strong>3. Insertion en BDD :</strong></p>
+        <div class="code-block">
+INSERT INTO maintenances VALUES (
+  id: 42,
+  vehicle_id: 7,
+  type: 'Vidange',
+  date: '2026-01-15',
+  kilometrage: 50000,
+  prix: 80.00,
+  pieces_utilisees: NULL,
+  intervalle_km: 15000,
+  intervalle_mois: 12,
+  prochaine_echeance_km: 65000,
+  prochaine_echeance_date: '2027-01-15',
+  created_at: '2026-01-15 14:30:00',
+  updated_at: '2026-01-15 14:30:00'
+);
+        </div>
+
+        <p><strong>4. Un mois plus tard (15/02/2026), Jean met à jour son kilométrage à 52 000 km :</strong></p>
+        <div class="code-block">
+UPDATE vehicles SET kilometrage_actuel = 52000 WHERE id = 7;
+        </div>
+
+        <p><strong>5. Calcul de l'état (front-end ou back-end) :</strong></p>
+        <div class="code-block">
+kmRestant = 65000 - 52000 = 13000 km → Vert ✅
+joursRestants = '2027-01-15' - '2026-02-15' = 334 jours → Vert ✅
+
+État final : 🟢 Vert (les deux sont OK)
+        </div>
+
+        <p><strong>6. Six mois plus tard (15/07/2026), kilométrage à 63 500 km :</strong></p>
+        <div class="code-block">
+kmRestant = 65000 - 63500 = 1500 km → Orange ⚠️
+joursRestants = '2027-01-15' - '2026-07-15' = 184 jours → Vert ✅
+
+État final : 🟠 Orange (l'échéance km approche)
+        </div>
+
+        <p><strong>7. Notification à Jean :</strong></p>
+        <div class="example-ui">
+⚠️ Votre Peugeot 206 nécessite une vidange
+📍 Dans 1 500 km (65 000 km)
+📅 Ou avant le 15/01/2027
+        </div>
+    </div>
+
+    <div class="section" style="background-color: #e8f5e9; border-left: 4px solid #4caf50;">
+        <h2>✅ Checklist pour le Développement</h2>
+        
+        <h3>Phase 1 : Base de données</h3>
+        <ul>
+            <li>☐ Créer la table <code>maintenances</code> avec les champs <code>intervalle_km</code> et <code>intervalle_mois</code></li>
+            <li>☐ Ajouter <code>kilometrage_actuel</code> dans la table <code>vehicles</code></li>
+            <li>☐ Créer les index pour optimiser les requêtes</li>
+            <li>☐ (Optionnel) Créer les triggers pour le calcul automatique des échéances</li>
+        </ul>
+
+        <h3>Phase 2 : Back-end</h3>
+        <ul>
+            <li>☐ Fonction de calcul des échéances à l'insertion/modification</li>
+            <li>☐ Fonction de calcul de l'état d'un entretien (km et date)</li>
+            <li>☐ API pour mettre à jour le kilométrage actuel d'un véhicule</li>
+            <li>☐ API pour récupérer tous les entretiens avec leur état calculé</li>
+        </ul>
+
+        <h3>Phase 3 : Front-end</h3>
+        <ul>
+            <li>☐ Formulaire d'ajout d'entretien avec checkboxes pour les intervalles</li>
+            <li>☐ Pré-remplissage des intervalles par défaut selon le type</li>
+            <li>☐ Affichage des prochaines échéances calculées en temps réel</li>
+            <li>☐ Page "Mon Garage" avec pastilles colorées par véhicule</li>
+            <li>☐ Page "Entretiens" avec liste des alertes triées par urgence</li>
+            <li>☐ Champ de mise à jour du kilométrage actuel</li>
+        </ul>
+
+        <h3>Phase 4 : Tests</h3>
+        <ul>
+            <li>☐ Tester entretien avec uniquement échéance km</li>
+            <li>☐ Tester entretien avec uniquement échéance temporelle</li>
+            <li>☐ Tester entretien avec double échéance</li>
+            <li>☐ Tester entretien sans échéance (historique seul)</li>
+            <li>☐ Vérifier le calcul correct des alertes dans tous les cas</li>
+            <li>☐ Tester la modification d'un entretien (recalcul des échéances)</li>
+        </ul>
+    </div>
+
+    <footer style="text-align: center; margin-top: 40px; padding: 20px; background-color: #34495e; color: white; border-radius: 8px;">
+        <p><strong>TonEntretienAuto</strong> - Système d'Échéances Temporelles</p>
+        <p>Document technique pour MCD/MLD/MPD - Février 2026</p>
+        <p style="font-size: 0.9em; opacity: 0.8;">Ce document récapitule toutes les discussions sur le système de double échéance (kilométrique et temporelle)</p>
+    </footer>
+</body>
+</html>

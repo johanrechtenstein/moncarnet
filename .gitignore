@@ -1,0 +1,17 @@
+# --- Sécurité & Identifiants (LE PLUS IMPORTANT) ---
+.env
+config.php
+credentials.json
+
+# --- Dépendances (Trop lourd pour Git) ---
+node_modules/
+vendor/
+
+# --- Fichiers système & IDE ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Dossiers de build (Générés par Vue.js) ---
+dist/
