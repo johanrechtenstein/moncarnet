@@ -1,0 +1,139 @@
+### Créer une nouvelle voiture
+POST http://127.0.0.1:8000/api/cars
+Content-Type: application/json
+
+{
+    "marque": "Peugeot",
+    "modele": "208",
+    "immatriculation": "AA-123-BC",
+    "user_id": 1,
+    "image_url": "https://placehold.co/600x400"
+}
+
+###
+
+### Créer une maintenance pour cette voiture
+# (Assure-toi que la voiture ID 1 et la catégorie ID 1 existent)
+POST http://127.0.0.1:8000/api/maintenances
+Content-Type: application/json
+
+{   
+   "date": "2026-03-24",
+    "kilometrage": 155000,
+    "description": "Changement kit de distribution et pompe à eau",
+    "facture_url": "https://mon-stockage.com/facture_123.pdf",
+    "est_obsolete": 0,
+    "categorie_id": 1,
+    "car_id": 1,
+    "parent_id": null
+}
+
+###
+
+
+
+### Supprimer une voiture (et tout ce qui lui est lié)
+DELETE http://127.0.0.1:8000/api/cars/2
+
+### Supprimer une maintenance (et tout ce qui lui est lié)
+DELETE http://127.0.0.1:8000/api/maintenances/1
+
+
+
+### TEST A : CORRECTION (L'ID 3 va juste être modifié)
+PUT http://127.0.0.1:8000/api/maintenances/3
+Content-Type: application/json
+
+{
+    "date": "2026-03-24",
+    "kilometrage": 155500,
+    "description": "Changement kit distribution (Correction erreur KM)",
+    "facture_url": "https://mon-stockage.com/facture_123_v2.pdf",
+    "categorie_id": 1
+}
+
+
+### TEST B : ARCHIVAGE (Si tu as changé le délai ou la date SQL)
+# Cette requête devrait mettre l'ID 3 à est_obsolete: 1 
+# et créer un nouvel ID (ex: 4) avec parent_id: 3
+PUT http://127.0.0.1:8000/api/maintenances/3
+Content-Type: application/json
+
+{
+    "date": "2026-03-26",
+    "kilometrage": 155500,
+    "description": "Nouvelle modification après 24h",
+    "facture_url": "https://mon-stockage.com/facture_123_final.pdf",
+    "categorie_id": 1
+}
+
+
+### Test de modification autorisée (Plaque uniquement)
+PUT http://127.0.0.1:8000/api/cars/1
+Content-Type: application/json
+
+{
+    "immatriculation": "ZZ-888-ZZ"
+}
+
+
+
+### Inscription d'un nouvel utilisateur
+POST http://127.0.0.1:8000/api/register
+Content-Type: application/json
+Accept: application/json
+
+{
+    "pseudo": "MecaExpert2",
+    "email": "meca@test2.fr",
+    "password": "monSuperMotDePasse123",
+    "password_confirmation": "monSuperMotDePasse123"
+}
+
+
+### Récupérer mes infos d'utilisateur connecté
+GET http://127.0.0.1:8000/api/user
+Accept: application/json
+Authorization: Bearer 2|BP73iczkNYLBH1asJyLGO5y03kuyQG8uPgAJFR3g19dd342e
+
+
+### Connexion
+POST http://127.0.0.1:8000/api/login
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "meca@test1.fr",
+    "password": "monSuperMotDePasse123"
+}
+
+
+
+
+### 2. CONNEXION (C'est ici que tu récupères la "Clé")
+# @name login
+POST http://127.0.0.1:8000/api/login
+Accept: application/json
+Content-Type: application/json
+
+{
+    "email": "meca@test1.fr",
+    "password": "monSuperMotDePasse123"
+}
+
+### 3. VOIR UNE VOITURE SPÉCIFIQUE
+# IMPORTANT : Recopie BIEN tout le token (ex: 3|abc123...)
+GET http://127.0.0.1:8000/api/cars/3
+Accept: application/json
+Authorization: Bearer 3|ddd15a6b5fff55ac314a2a8fe47bc60108fe624d96ecdad8a715ccd2b51d5ed7
+
+
+### SUPPRIMER MON COMPTE (Droit à l'oubli)
+DELETE http://127.0.0.1:8000/api/user
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer 3|ddd15a6b5fff55ac314a2a8fe47bc60108fe624d96ecdad8a715ccd2b51d5ed7
+
+{
+    "password": "tomonSuperMotDePasse123"
+}
