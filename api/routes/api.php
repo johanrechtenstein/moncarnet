@@ -6,6 +6,14 @@ use App\Http\Controllers\Api\CarController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\AuthController;
 
+//route de test api-vue.
+Route::get('/test-liaison', function () {
+    return response()->json([
+        'message' => 'Connexion réussie ! Laravel parle bien à Vue.',
+        'status' => 'OK'
+    ]);
+});
+
 //routes public
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
