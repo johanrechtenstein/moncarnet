@@ -49,7 +49,7 @@
   text-decoration: none;
   font-weight: 500;
   font-size: 1.1rem;
-  transition: opacity 0.3s;
+  transition: all 0.3s ease;
 }
 
 .nav-item:hover {
@@ -68,7 +68,7 @@
   font-weight: bold;
   font-size: 1.1rem;
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
+  transition: all 0.3s ease;
 }
 
 .btn-inscription:hover {

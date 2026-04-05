@@ -1,14 +1,23 @@
 <template>
   <div class="main-container">
     <Navbar />
-  
 
+   <router-view />
+    
+    <Footer />
   </div>
+
+    
+
+    
 </template>
 
 <script setup>
 // 1. On importe le fichier du composant
-import Navbar from './components/Navbar.vue'
+import Navbar from './components/navbar.vue';
+
+import Footer from './components/Footer.vue';
+
 </script>
 
 <style>
