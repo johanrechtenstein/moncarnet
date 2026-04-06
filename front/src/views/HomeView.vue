@@ -8,16 +8,56 @@
     <div class="hero-form">
       <div class="form-group">
         <label>Pseudo :</label>
-        <input type="text" />
+        <input v-model="pseudo" type="text" placeholder="Pseudo" />
       </div>
       <div class="form-group">
         <label>Mot de passe :</label>
-        <input type="password" />
+        <input v-model="password" type="password" placeholder="••••••••" />
       </div>
-      <button class="btn-connexion">Connexion</button>
+      <button @click="login" class="btn-connexion">Connexion</button>
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router' // Pour rediriger l'utilisateur après
+
+// On crée deux variables "réactives" pour stocker ce que l'utilisateur tape
+const pseudo = ref('')
+const password = ref('')
+const router = useRouter()
+
+// On crée une fonction qui sera appelée quand on clique sur le bouton
+const login = async () => {
+  try {
+    // On envoie les données à l'API
+    // Remplace l'URL par celle de ton backend plus tard
+    const response = await axios.post('http://127.0.0.1:8000/api/login', {
+      pseudo: pseudo.value,
+      password: password.value
+    });
+console.log("Voici ce que le PHP a envoyé :", response.data);
+    // Si l'API répond avec succès
+    const token = response.data.access_token || response.data.token;
+    if (token) {
+      // On stocke le jeton de sécurité (Token) dans le navigateur
+      localStorage.setItem('user-token', token);
+      alert("Identifiants ok.");
+      
+      // On redirige vers le garage (le dashboard)
+      router.push('/dashboard'); 
+    }else {
+      // Au cas où l'API répond 200 mais sans token (peu probable mais utile pour débugger)
+      console.log("Réponse reçue mais pas de token :", response.data);
+    }
+  } catch (error) {
+    console.error("Erreur de connexion :", error);
+    alert("Identifiants incorrects ou serveur injoignable.");
+  }
+}
+</script>
 
 <style scoped>
 .hero-container {

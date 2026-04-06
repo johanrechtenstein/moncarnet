@@ -14,19 +14,19 @@ class AuthController extends Controller
     public function login(Request $request) {
         // 1. On valide que l'utilisateur a bien envoyé un email et un password
         $request->validate([
-            'email' => 'required|email',
+            'pseudo' => 'required|string',
             'password' => 'required',
         ]);
 
         // 2. On tente de connecter l'utilisateur (Laravel compare l'email et le hash du mot de passe)
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        if (!Auth::attempt($request->only('pseudo', 'password'))) {
             return response()->json([
                 'message' => 'Identifiants incorrects'
             ], 401); // 401 = Non autorisé
         }
 
         // 3. Si on arrive ici, c'est que les identifiants sont bons !
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = User::where('pseudo', $request->pseudo)->firstOrFail();
 
         // Optionnel : Supprime tous les anciens tokens de cet utilisateur avant d'en créer un nouveau
         $user->tokens()->delete();
