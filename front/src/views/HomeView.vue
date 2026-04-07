@@ -44,10 +44,9 @@ console.log("Voici ce que le PHP a envoyé :", response.data);
     if (token) {
       // On stocke le jeton de sécurité (Token) dans le navigateur
       localStorage.setItem('user-token', token);
-      alert("Identifiants ok.");
-      
+      localStorage.setItem('user-pseudo', pseudo.value);   
       // On redirige vers le garage (le dashboard)
-      router.push('/dashboard'); 
+      router.push('/garage'); 
     }else {
       // Au cas où l'API répond 200 mais sans token (peu probable mais utile pour débugger)
       console.log("Réponse reçue mais pas de token :", response.data);
@@ -67,7 +66,7 @@ console.log("Voici ce que le PHP a envoyé :", response.data);
   align-items: flex-start;
   padding: 0 5%;
   flex-grow: 1; /* Prend tout l'espace central entre la nav et le footer */
-  padding-top: 15rem;
+  
 }
 
 /* Style commun aux deux blocs (le fond noir transparent) */

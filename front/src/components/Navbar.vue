@@ -1,15 +1,68 @@
 <template>
   <nav class="navbar">
     <div class="logo">
-      <img src="../assets/logo2.png" alt="Logo MG" class="logo-img">
+      <router-link to="/">
+        <img src="../assets/logo2.png" alt="Logo MG" class="logo-img">
+      </router-link>
     </div>
 
     <div class="nav-links">
       <a href="#" class="nav-item">Contact</a>
-      <button class="btn-inscription">Inscription</button>
+
+      <button v-if="isLoggedIn" @click="logout" class="btn-inscription">
+        Déconnexion
+      </button>
+
+      <button v-else class="btn-inscription">
+        Inscription
+      </button>
     </div>
   </nav>
 </template>
+
+<script setup>
+import { ref, onMounted, watch } from 'vue'
+import axios from 'axios'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
+const isLoggedIn = ref(false)
+
+const checkLoginStatus = () => {
+  isLoggedIn.value = !!localStorage.getItem('user-token')
+}
+
+// 1. On vérifie au chargement initial
+onMounted(() => {
+  checkLoginStatus()
+})
+
+// 2. MAGIE : On surveille chaque changement de page (route)
+// Dès que l'URL change (ex: de / vers /garage), on revérifie le token
+watch(() => route.path, () => {
+  checkLoginStatus()
+})
+
+const logout = async () => {
+  try {
+    const token = localStorage.getItem('user-token')
+    
+    // On prévient l'API Laravel qu'on se déconnecte
+    await axios.post('http://127.0.0.1:8000/api/logout', {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+  } catch (error) {
+    console.error("Erreur lors de la déconnexion", error)
+  } finally {
+    // Dans tous les cas, on nettoie le navigateur et on redirige
+    localStorage.removeItem('user-token')
+    localStorage.removeItem('user-pseudo')
+    isLoggedIn.value = false
+    router.push('/')
+  }
+}
+</script>
 
 <style scoped>
 .navbar {
@@ -25,12 +78,13 @@
   );
   
   /* On positionne la navbar en haut de l'écran */
-  position: absolute;
+  /*position: absolute;*/
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 10; /* Assure qu'elle est bien DEVANT l'image de fond */
+  z-index: 999; /* Assure qu'elle est bien DEVANT l'image de fond */
   box-sizing: border-box; /* Évite que le padding ne déforme la largeur */
+  pointer-events: auto;
 }
 
 .logo-img {
