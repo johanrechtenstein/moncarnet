@@ -1,7 +1,7 @@
 <template>
   <footer class="site-footer">
     <nav class="footer-nav">
-        <a href="#" class="nav-item">Contact</a>
+        <router-link to="/contact" class="nav-item">Contact</router-link>
         <a href="#" class="nav-item">RGPD</a>
         <a href="#" class="nav-item">Mentions Légales</a>
     </nav>

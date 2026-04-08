@@ -7,7 +7,8 @@
     </div>
 
     <div class="nav-links">
-      <a href="#" class="nav-item">Contact</a>
+      <router-link to="/contact" class="nav-item">Contact</router-link>
+      <router-link to="/garage" class="nav-item">Mon garage</router-link>
 
       <button v-if="isLoggedIn" @click="logout" class="btn-inscription">
         Déconnexion
