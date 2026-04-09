@@ -1,14 +1,15 @@
 <template>
   <nav class="navbar">
     <div class="logo">
-      <router-link to="/">
+      <router-link :to="isLoggedIn ? '/garage' : '/'">  <!-- expression ternaire -->
         <img src="../assets/logo2.png" alt="Logo MG" class="logo-img">
       </router-link>
     </div>
 
     <div class="nav-links">
       <router-link to="/contact" class="nav-item">Contact</router-link>
-      <router-link to="/garage" class="nav-item">Mon garage</router-link>
+      <router-link v-if="isLoggedIn" to="/garage" class="nav-item">Mon garage</router-link>
+      <router-link v-if="!isLoggedIn" to="/" class="nav-item">Accueil</router-link>
 
       <button v-if="isLoggedIn" @click="logout" class="btn-inscription">
         Déconnexion

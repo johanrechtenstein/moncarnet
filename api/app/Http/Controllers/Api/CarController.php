@@ -41,7 +41,7 @@ class CarController extends Controller
             'marque'          => 'required|string|max:100',
             'modele'          => 'required|string|max:100',
             'immatriculation' => 'required|string|unique:cars',
-            'user_id'         => 'required|exists:users,id', // Vérifie que l'user existe
+            //'user_id'         => 'required|exists:users,id', Vérifie que l'user existe
             'image_url'       => 'nullable|string'
         ]);
 
