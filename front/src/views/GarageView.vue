@@ -1,7 +1,32 @@
 <template>
   <div class="garage-page">
-    <div class="garage-header">
-      <h1 style="color: white;">Mon Garage</h1>
+
+    <h1 style="color: white;">Garage de {{ user.pseudo }}</h1>
+
+    <div class="garage-content">
+      <div v-if="cars.length === 0" style="color: gray;">
+        Aucun véhicule dans votre garage.
+      </div>
+      
+      <div v-else class="cars-grid">
+        <div v-for="car in cars" :key="car.id" class="car-card-simple" @click="goToMaintenance(car.id)" 
+         style="cursor: pointer;">
+          <button @click.stop="deleteCar(car.id)" class="delete-icon">×</button>
+           <div class="car-name-tag">
+          {{ car.marque }} {{ car.modele }}
+      </div>
+  
+      <div style="margin: 20px 0;">
+        <img src="../assets/voiture1.png" style="border-radius: 15px; width: 50%;">
+      </div>
+
+      <div class="plate-display">
+        {{ car.immatriculation }}
+      </div>
+        </div>
+      </div>
+    </div>
+    <div class="garage-footer">
       
       <button v-if="!showForm" @click="showForm = true" class="btn-add">
         Ajouter
@@ -21,27 +46,6 @@
       </form>
     </div>
 
-    <div class="garage-content">
-      <div v-if="cars.length === 0" style="color: gray;">
-        Aucun véhicule dans votre garage.
-      </div>
-      
-      <div v-else class="cars-grid">
-        <div v-for="car in cars" :key="car.id" class="car-card-simple">
-           <div class="car-name-tag">
-          {{ car.marque }} {{ car.modele }}
-      </div>
-  
-      <div style="margin: 20px 0;">
-        <img src="https://via.placeholder.com/150" style="border-radius: 15px; width: 100%;">
-      </div>
-
-      <div class="plate-display">
-        {{ car.immatriculation }}
-      </div>
-        </div>
-      </div>
-    </div>
 
   </div>
 </template>
@@ -49,7 +53,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
+
+
+const user = ref({ pseudo: 'Mécanicien' })
 const cars = ref([]) // Notre liste vide au départ
 const showForm = ref(false)
 
@@ -66,9 +75,26 @@ const fetchCars = async () => {
   }
 }
 
+
+const goToMaintenance = (carId) => {
+  // On redirige vers une route dynamique, ex: /maintenance/5
+  router.push(`/maintenance/${carId}`)
+}
+
+
+
 // On lance la récupération dès que la page s'affiche
 onMounted(() => {
+  const savedPseudo = localStorage.getItem('user-pseudo')
+  if (savedPseudo) if (savedPseudo) {
+    // Si savedPseudo est "Jean", user.value.pseudo devient "Jean"
+    user.value.pseudo = savedPseudo
+  } else {
+    user.value.pseudo = 'Mécanicien'
+  }
+ 
   fetchCars()
+
 })
 
 
@@ -103,21 +129,48 @@ const addVehicle = async () => {
     console.error("Erreur lors de l'ajout", error)
   }
 }
+
+// suppression de voiture
+const deleteCar = async (id) => {
+  if (confirm("Voulez-vous vraiment retirer ce véhicule du garage ?")) {
+    try {
+      const token = localStorage.getItem('user-token')
+      await axios.delete(`http://127.0.0.1:8000/api/cars/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      // On recharge la liste pour mettre à jour l'affichage
+      fetchCars()
+    } catch (error) {
+      console.error("Erreur lors de la suppression :", error)
+    }
+  }
+}
+
 </script>
 
 <style scoped>
 
+h1 {
+  color: white;
+  margin-left: 20px; /* Ajuste cette valeur (10px, 30px, etc.) selon tes goûts */
+  margin-bottom: 10px; /* Un petit espace avec le contenu du dessous */
+  text-align: left;    /* Assure qu'il reste à gauche */
+}
 
 
 /* Container du formulaire */
 .add-car-inline {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.8);
   padding: 20px;
   border-radius: 15px;
-  margin-bottom: 30px;
-  border-left: 5px solid #27ae60;
+  margin-bottom: 10px;
+  border-left: 5px solid #FF6B35;
 }
 
+.garage-footer{
+  margin-top: 20px;
+}
 /* Alignement horizontal du formulaire */
 .form-inline {
   display: flex;
@@ -144,26 +197,27 @@ const addVehicle = async () => {
 /* ---------------------------------------------------------------------------------------------------------------- */
 .cars-grid {
   display: grid;
-  /* Crée des colonnes de 300px minimum, autant qu'il en tient dans la largeur */
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+  /* On utilise auto-fit et une taille fixe (300px) au lieu de 1fr */
+  grid-template-columns: repeat(auto-fit, 300px); 
   gap: 30px;
   width: 100%;
-  max-width: 1200px; /* Pour ne pas que ça s'étale trop sur les écrans géants */
-  margin: 0 auto;    /* Centre la grille */
-  padding: 20px;
+  justify-content: center;   /* Centre les colonnes dans la grille */
+  align-content: center;    
+  margin: 0 auto;           /* Centre le bloc complet */
 }
 /* Container principal */
 .garage-page {
-  padding: 10px 40px 40px; /* Espace pour la navbar */
-  width: 100% ;
-  margin: 30px;
+  margin: 20px auto; /* Centre le bloc et laisse un peu d'air en haut/bas */
+  width: 95%;        /* Prend 95% de l'écran, donc 2.5% de marge de chaque côté */
+  max-width: 1400px; /* Mais ne devient pas géant sur un écran 4K */
+  padding: 60px 20px;
   background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('../assets/maintenance2.png'); /* Fond sombre */
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
   color: white;
   border-radius: 30px;
-
+  box-sizing: border-box;
 }
 
 
@@ -171,8 +225,8 @@ const addVehicle = async () => {
 .garage-content {
   display: flex;
   justify-content: center;
-  gap: 30px;
-  flex-wrap: wrap; /* Pour que ça revienne à la ligne sur mobile */
+ 
+ 
   margin-top: 50px;
 }
 
@@ -185,7 +239,7 @@ const addVehicle = async () => {
   width: 250px;
   text-align: center;
   position: relative;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
   transition: transform 0.3s ease;
 }
 
@@ -249,6 +303,36 @@ const addVehicle = async () => {
 .btn-add:hover {
   background-color: #2ecc71;
   transform: scale(1.05);
+}
+
+
+.delete-icon {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: red;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+ 
+}
+
+.delete-icon:hover {
+  
+  transform: scale(1.3);
+}
+
+
+@media (max-width: 740px) {
+  /* On passe le formulaire en colonne */
+  .form-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 </style>

@@ -19,7 +19,7 @@ class Maintenance extends Model
 
 public function car()
 {
-    return $this->belongsTo(Car::class, 'voiture_id');
+    return $this->belongsTo(Car::class, 'car_id');
 }
 
 }

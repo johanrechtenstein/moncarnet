@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from './views/HomeView.vue';
 import GarageView from './views/GarageView.vue';
 import ContactView from './views/ContactView.vue';
+import MaintenanceView from './views/MaintenanceView.vue';
 
 const routes = [
    {
@@ -19,9 +20,12 @@ const routes = [
     name: 'garage',
     // C'est ici que tu créeras ton futur composant DashboardView.vue
     component: GarageView 
-  }
-
-  // On pourra ajouter { path: '/inscription', component: RegistrationView } plus tard !
+  },
+  {
+  path: '/maintenance/:id',
+  name: 'Maintenance',
+  component: MaintenanceView
+  }  
 ];
 
 const router = createRouter({

@@ -36,7 +36,6 @@ class CarController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Validation des champs (selon votre SQL)
         $validated = $request->validate([
             'marque'          => 'required|string|max:100',
             'modele'          => 'required|string|max:100',
