@@ -28,8 +28,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="log in maintenanceLogs" :key="log.id">
-              <td>{{ log.categorie }}</td>
+            <tr v-for="log in filteredLogs" :key="log.id">
+              <td>{{ log.categorie ? log.categorie.nom : 'N/A' }}</td>
               <td>{{ new Date(log.date).toLocaleDateString() }}</td>
               <td>{{ log.kilometrage }} km</td>
               <td>{{ log.description }}</td>
@@ -43,56 +43,147 @@
         </table>
         
         <div class="table-footer">
-          <label><input type="checkbox"> cacher les mises à jours</label>
-          <button class="btn-add-log">Ajouter</button>
+        
+  <div class="footer-controls">
+    <label><input type="checkbox" v-model="hideReleves"> cacher les relevés</label>
+    
+    <button class="btn-add-log" @click="showAddForm = !showAddForm">
+      {{ showAddForm ? 'Annuler' : 'Ajouter' }}
+    </button>
+  </div>
+
+  <div v-if="showAddForm" class="add-form-overlay">
+    <div class="inline-form">
+      <select v-model="form.categorie_id">
+        <option value="" disabled>Catégorie</option>
+        <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+          {{ cat.nom }}
+        </option>
+      </select>
+      
+      <input type="date" v-model="form.date">
+      <input type="number" v-model="form.kilometrage" placeholder="Km">
+      <input type="text" v-model="form.description" placeholder="Description...">
+      
+      <button class="btn-confirm" @click="addMaintenance">Enregistrer</button>
+    </div>
+  </div>
+</div>
+     
         </div>
       </div>
 
-      <div class="update-footer">
-        <span>Mise à jours du kilométrage :</span>
-        <input type="number" class="input-short">
-        <span>Date :</span>
-        <input type="date" class="input-short">
-        <button class="btn-update">mettre à jours</button>
-      </div>
+      
     </div>
-  </div>
+  
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 
 const route = useRoute()
 const car = ref({})
 const maintenanceLogs = ref([])
+const categories = ref([])
 const loading = ref(true)
+const showAddForm = ref(false) 
+const hideReleves = ref(false)
+
+// fitrage des données pour ne plus avoir les relevés.
+const filteredLogs = computed(() => {
+  if (hideReleves.value) {
+    // On garde tout SAUF ceux dont la catégorie est "Relevé" (ID 1 par exemple)
+    // Adapte l'ID ou le nom selon ta base de données
+    return maintenanceLogs.value.filter(log => log.categorie?.nom !== 'Relevé')
+  }
+  return maintenanceLogs.value
+})
+
+// Objet pour le formulaire d'ajout
+const form = ref({
+  date: new Date().toISOString().split('T')[0], // Aujourd'hui par défaut
+  kilometrage: '',
+  description: '',
+  facture_url: null,
+  categorie_id: '',
+  car_id: route.params.id
+})
+
+// 1. Charger les catégories pour le menu déroulant
+const fetchCategories = async () => {
+  try {
+    const res = await axios.get('http://127.0.0.1:8000/api/categories')
+    categories.value = res.data
+    console.log("Catégories récupérées :", categories.value)
+  } catch (e) { console.error("Erreur catégories", e) }
+}
+
+// 2. Envoyer la nouvelle maintenance
+const addMaintenance = async () => {
+  try {
+    const token = localStorage.getItem('user-token')
+    const res = await axios.post('http://127.0.0.1:8000/api/maintenances', form.value, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    
+    // On ajoute le résultat (qui contient .categorie grâce au .load()) au tableau
+    maintenanceLogs.value.unshift(res.data)
+    
+    // Reset du formulaire
+    form.value.description = ''
+    form.value.kilometrage = ''
+    showAddForm.value = false
+  } catch (e) {
+    console.error("Erreur ajout", e.response?.data)
+  }
+}
+
 
 const fetchMaintenanceData = async () => {
   try {
     const token = localStorage.getItem('user-token')
     const carId = route.params.id
 
-    const res = await axios.get(`http://127.0.0.1:8000/api/cars/${carId}`,{
+    const res = await axios.get(`http://127.0.0.1:8000/api/cars/${carId}`, {
       headers: { Authorization: `Bearer ${token}` }
-    } )
+    })
     
-    // car.value contiendra les infos de la voiture (immatriculation, etc.)
-    car.value = res.data
-    // maintenanceLogs contiendra la liste liée (grâce au ->with('maintenances'))
-    maintenanceLogs.value = res.data.maintenances || []
+    // On extrait l'objet voiture
+    const carData = res.data.data
+    
+    if (carData) {
+      car.value = carData
+      // ON UTILISE carData ICI AUSSI !
+      maintenanceLogs.value = carData.maintenances || []
+      
+      console.log("Données de la voiture chargées :", carData)
+    } else {
+      console.warn("Aucune donnée trouvée pour cette voiture.")
+    }
+
   } catch (error) {
     console.error("Erreur de chargement :", error)
-  }finally {
-    loading.value = false // S'exécute quoi qu'il arrive (succès ou erreur)
+  } finally {
+    loading.value = false
   }
 }
 
-onMounted(fetchMaintenanceData)
+onMounted(() => {
+  fetchMaintenanceData() 
+  fetchCategories()
+})
 </script>
 
 <style scoped>
+
+.mini-car-img{
+width: 50px;
+
+}
+
+
 .maintenance-container {
   background: #1a1a1a;
   color: white;
@@ -126,6 +217,51 @@ onMounted(fetchMaintenanceData)
   background: rgba(255,255,255,0.1);
   padding: 10px 30px;
   border-radius: 50px;
+}
+
+.table-footer {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column; /* Pour empiler le formulaire et les boutons */
+  gap: 15px;
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.add-form-overlay {
+  background: #333;
+  padding: 15px;
+  border-radius: 20px;
+  border: 1px solid #2ecc71; /* Rappel du vert */
+}
+
+.inline-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inline-form input, .inline-form select {
+  background: #1a1a1a;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 10px;
+  padding: 8px;
+  flex: 1;
+}
+
+.btn-confirm {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
 }
 /* Ajoute tes autres styles ici pour coller à la photo */
 </style>

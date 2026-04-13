@@ -4,6 +4,7 @@ import GarageView from './views/GarageView.vue';
 import ContactView from './views/ContactView.vue';
 import MaintenanceView from './views/MaintenanceView.vue';
 
+
 const routes = [
    {
     path: '/contact', // L'URL que l'on cherche

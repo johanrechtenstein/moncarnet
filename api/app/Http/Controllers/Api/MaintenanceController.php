@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use App\Models\Maintenance;
+use App\Models\Categorie;
 use Illuminate\Http\Request;
 
 class MaintenanceController extends Controller
@@ -26,7 +27,7 @@ class MaintenanceController extends Controller
         // 2. Création (Méthode "Directe")
         $maintenance = Maintenance::create($validated);
 
-        return response()->json($maintenance, 201);
+        return response()->json($maintenance->load('categorie'), 201);
     }
 
 

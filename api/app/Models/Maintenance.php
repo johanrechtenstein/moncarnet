@@ -21,5 +21,9 @@ public function car()
 {
     return $this->belongsTo(Car::class, 'car_id');
 }
+public function categorie()
+{
+    return $this->belongsTo(Categorie::class, 'categorie_id');
+}
 
 }

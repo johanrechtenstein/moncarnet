@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CarController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CategorieController;
 
 //route de test api-vue.
 Route::get('/test-liaison', function () {
@@ -51,3 +52,6 @@ Route::post('/maintenances', [MaintenanceController::class, 'store']);
 Route::delete('/maintenances/{id}', [MaintenanceController::class, 'destroy']);
 Route::put('/maintenances/{id}', [MaintenanceController::class, 'update']);
 });
+
+// categories
+Route::get('/categories', [CategorieController::class, 'index']);

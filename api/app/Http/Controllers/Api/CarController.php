@@ -25,7 +25,7 @@ class CarController extends Controller
         // On récupère la voiture avec ses maintenances triées par date
         // On utilise findOrFail pour renvoyer une 404 si l'ID n'existe pas
         $car = auth()->user()->cars()->with(['maintenances' => function($query) {
-        $query->orderBy('date', 'desc');
+        $query->orderBy('date', 'desc')->with('categorie');
     }])->findOrFail($id);
 
         return response()->json([
