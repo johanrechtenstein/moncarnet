@@ -21,7 +21,9 @@ class MaintenanceController extends Controller
             'est_obsolete' => 'boolean',
             'categorie_id' => 'required|exists:categories,id',
             'car_id'       => 'required|exists:cars,id', // On vérifie que la voiture existe !
-            'parent_id'    => 'nullable|exists:maintenances,id'
+            'parent_id'    => 'nullable|exists:maintenances,id',
+            'echeance_km'   => 'nullable|integer', 
+            'echeance_date' => 'nullable|date'
         ]);
 
         // 2. Création (Méthode "Directe")
@@ -53,6 +55,8 @@ class MaintenanceController extends Controller
             'description'  => 'required|string',
             'facture_url'  => 'nullable|string',
             'categorie_id' => 'required|exists:categories,id',
+            'echeance_km'   => 'nullable|integer',
+            'echeance_date' => 'nullable|date'
         ]);
 
     // 2. Vérification du délai de 24h
@@ -81,9 +85,12 @@ class MaintenanceController extends Controller
             'description'  => $validated['description'],
             'facture_url'  => $validated['facture_url'],
             'categorie_id' => $validated['categorie_id'],
+            'echeance_km'   => $validated['echeance_km'],   // Nouveau
+            'echeance_date' => $validated['echeance_date'],
             'car_id'       => $maintenance->car_id,
             'parent_id'    => $maintenance->id, // Lien vers l'ancienne
             'est_obsolete' => false,
+            
         ]);
 
         return response()->json([

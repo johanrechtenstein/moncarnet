@@ -22,16 +22,25 @@
               <th>catégorie</th>
               <th>date</th>
               <th>kilométrage</th>
-              <th>description</th>
+              <th>prochain entretien</th><th>description</th>
               <th>facture</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="log in filteredLogs" :key="log.id">
-              <td>{{ log.categorie ? log.categorie.nom : 'N/A' }}</td>
+              <td>{{ log.categorie?.nom || 'N/A' }}</td>
               <td>{{ new Date(log.date).toLocaleDateString() }}</td>
               <td>{{ log.kilometrage }} km</td>
+              <td>
+                <div v-if="log.echeance_km" class="echeance-badge km">
+                {{ log.echeance_km }} km
+                </div>
+                <div v-if="log.echeance_date" class="echeance-badge date">
+                {{ new Date(log.echeance_date).toLocaleDateString() }}
+                </div>
+                <span v-if="!log.echeance_km && !log.echeance_date">-</span>
+                </td>
               <td>{{ log.description }}</td>
               <td>{{ log.facture_url || '-' }}</td>
               <td><span class="edit-icon" style="cursor:pointer">✏️</span></td>
@@ -64,6 +73,8 @@
       <input type="date" v-model="form.date">
       <input type="number" v-model="form.kilometrage" placeholder="Km">
       <input type="text" v-model="form.description" placeholder="Description...">
+      <input type="number" v-model="form.echeance_km" placeholder="Échéance (km)">
+      <input type="date" v-model="form.echeance_date" title="Date d'échéance">
       
       <button class="btn-confirm" @click="addMaintenance">Enregistrer</button>
     </div>
@@ -106,6 +117,8 @@ const form = ref({
   date: new Date().toISOString().split('T')[0], // Aujourd'hui par défaut
   kilometrage: '',
   description: '',
+  echeance_km: '',
+  echeance_date: '',
   facture_url: null,
   categorie_id: '',
   car_id: route.params.id
@@ -134,6 +147,8 @@ const addMaintenance = async () => {
     // Reset du formulaire
     form.value.description = ''
     form.value.kilometrage = ''
+    form.value.echeance_km = ''  
+    form.value.echeance_date = ''
     showAddForm.value = false
   } catch (e) {
     console.error("Erreur ajout", e.response?.data)
@@ -262,6 +277,27 @@ width: 50px;
   border-radius: 10px;
   cursor: pointer;
   font-weight: bold;
+}
+
+
+.echeance-badge {
+  font-size: 0.85em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 2px 0;
+  display: inline-block;
+}
+
+.echeance-badge.km {
+  background: rgba(46, 204, 113, 0.1); /* Vert très léger */
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.echeance-badge.date {
+  background: rgba(52, 152, 219, 0.1); /* Bleu très léger */
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.3);
 }
 /* Ajoute tes autres styles ici pour coller à la photo */
 </style>

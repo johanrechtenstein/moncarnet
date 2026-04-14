@@ -14,7 +14,9 @@ class Maintenance extends Model
     'est_obsolete', 
     'categorie_id', 
     'car_id',
-    'parent_id'
+    'parent_id',
+    'echeance_km',   // On ajoute ça
+    'echeance_date',
 ];
 
 public function car()
