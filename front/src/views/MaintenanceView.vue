@@ -19,6 +19,7 @@
         <table class="maintenance-table">
           <thead>
             <tr>
+              <th></th>
               <th>catégorie</th>
               <th>date</th>
               <th>kilométrage</th>
@@ -29,18 +30,32 @@
           </thead>
           <tbody>
             <tr v-for="log in filteredLogs" :key="log.id">
+              <td>
+  <div class="action-cell">
+    <button 
+      v-if="getEcheanceStatus(log) !== 'ok' && log.status !== 'validated'" 
+      @click="validateMaintenance(log)"
+      class="btn-small-validate"
+      title="Marquer comme effectué"
+    >
+      à faire
+    </button>
+
+    <span v-else class="edit-icon" style="cursor:pointer">🟢</span>
+  </div>
+</td>
               <td>{{ log.categorie?.nom || 'N/A' }}</td>
               <td>{{ new Date(log.date).toLocaleDateString() }}</td>
               <td>{{ log.kilometrage }} km</td>
               <td>
-                <div v-if="log.echeance_km" class="echeance-badge km">
-                {{ log.echeance_km }} km
-                </div>
-                <div v-if="log.echeance_date" class="echeance-badge date">
-                {{ new Date(log.echeance_date).toLocaleDateString() }}
-                </div>
-                <span v-if="!log.echeance_km && !log.echeance_date">-</span>
-                </td>
+                  <div v-if="log.echeance_km" class="echeance-badge km"  :class="getEcheanceStatus(log)">
+                  {{ log.echeance_km }} km
+                  </div>
+                  <div v-if="log.echeance_date" class="echeance-badge date"  :class="getEcheanceStatus(log)">
+                  {{ new Date(log.echeance_date).toLocaleDateString() }}
+                  </div>
+                  <span v-if="!log.echeance_km && !log.echeance_date">-</span>
+              </td>
               <td>{{ log.description }}</td>
               <td>{{ log.facture_url || '-' }}</td>
               <td><span class="edit-icon" style="cursor:pointer">✏️</span></td>
@@ -102,6 +117,65 @@ const loading = ref(true)
 const showAddForm = ref(false) 
 const hideReleves = ref(false)
 
+
+//kilometrage actuel
+const kilometrageActuel = computed(() => {
+  if (maintenanceLogs.value.length === 0) return car.value.kilometrage;
+
+  // On extrait tous les kilométrages des logs, on ajoute celui de base, 
+  // et on prend le maximum.
+  const kms = maintenanceLogs.value.map(log => log.kilometrage);
+  return Math.max(...kms, car.value.kilometrage || 0);
+});
+
+
+//fonction pour désactiver l'alerte
+const validateMaintenance = async (log) => {
+  try {
+    const token = localStorage.getItem('user-token');
+    
+    // On envoie UNIQUEMENT le statut pour déclencher le "Cas Particulier" du contrôleur
+    const res = await axios.put(`http://127.0.0.1:8000/api/maintenances/${log.id}`, 
+      { status: 'validated' }, 
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Si l'API répond OK, on met à jour l'objet localement pour éteindre le rouge
+    log.status = 'validated';
+    
+    console.log("Maintenance validée avec succès");
+  } catch (e) {
+    console.error("Erreur lors de la validation :", e.response?.data || e.message);
+    alert("Erreur lors de la mise à jour du statut.");
+  }
+};
+
+// échéance de la voiture
+const getEcheanceStatus = (log) => {
+  if (log.status === 'validated') return 'ok';
+  const kmActuel = kilometrageActuel.value;
+  const dateActuelle = new Date();
+  let urgency = 'ok';
+
+  
+  // Check KM
+  if (log.echeance_km) {
+    const reste = log.echeance_km - kmActuel;
+    if (reste <= 0) urgency = 'overdue';
+    else if (reste < 1000) urgency = 'soon';
+  }
+
+  // Check Date (si pas déjà en overdue)
+  if (log.echeance_date && urgency !== 'overdue') {
+    const jours = (new Date(log.echeance_date) - dateActuelle) / (1000 * 60 * 60 * 24);
+
+    if (jours <= 0) urgency = 'overdue';
+    else if (jours < 30) urgency = 'soon';
+  }
+
+  return urgency;
+};
+
 // fitrage des données pour ne plus avoir les relevés.
 const filteredLogs = computed(() => {
   if (hideReleves.value) {
@@ -135,6 +209,11 @@ const fetchCategories = async () => {
 
 // 2. Envoyer la nouvelle maintenance
 const addMaintenance = async () => {
+  // Sécurité : le kilométrage saisi doit être >= au kilométrage actuel
+  if (form.value.kilometrage < kilometrageActuel.value) {
+    alert(`Erreur : Le kilométrage saisi (${form.value.kilometrage}) est inférieur au compteur actuel (${car.value.kilometrage}).`);
+    return; // On arrête tout
+  }
   try {
     const token = localStorage.getItem('user-token')
     const res = await axios.post('http://127.0.0.1:8000/api/maintenances', form.value, {
@@ -193,9 +272,35 @@ onMounted(() => {
 
 <style scoped>
 
-.mini-car-img{
-width: 50px;
+/* Couleur de base (OK) */
+.echeance-badge {
+  color: white; 
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.85em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 2px 0;
+  display: inline-block;
+}
 
+/* Si l'échéance approche (Orange) */
+.echeance-badge.soon {
+  background: rgba(255, 165, 0, 0.2);
+  color: #ffa500;
+  border: 1px solid #ffa500;
+}
+
+/* Si l'échéance est dépassée (Rouge) */
+.echeance-badge.overdue {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff4d4d;
+  border: 1px solid #ff4d4d;
+  font-weight: bold;
+}
+
+
+.mini-car-img{
+  width: 50px;
 }
 
 
@@ -280,24 +385,39 @@ width: 50px;
 }
 
 
-.echeance-badge {
-  font-size: 0.85em;
-  padding: 2px 8px;
-  border-radius: 4px;
-  margin: 2px 0;
-  display: inline-block;
-}
 
-.echeance-badge.km {
-  background: rgba(46, 204, 113, 0.1); /* Vert très léger */
-  color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.3);
-}
+@media (max-width: 768px) {
+  /* On cache l'en-tête du tableau qui ne sert plus à rien */
+  .maintenance-table thead {
+    display: none;
+  }
 
-.echeance-badge.date {
-  background: rgba(52, 152, 219, 0.1); /* Bleu très léger */
-  color: #3498db;
-  border: 1px solid rgba(52, 152, 219, 0.3);
+  /* Chaque ligne devient une "carte" */
+  .maintenance-table tr {
+    display: block;
+    margin-bottom: 15px;
+    border: 1px solid #444;
+    border-radius: 15px;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+  }
+
+  /* Chaque cellule s'affiche l'une sous l'autre */
+  .maintenance-table td {
+    display: flex;
+    justify-content: space-between;
+    text-align: right;
+    border-bottom: 1px solid #333;
+    padding: 8px 5px;
+  }
+
+  /* On peut rajouter le nom de la colonne avant la valeur avec du CSS */
+  .maintenance-table td::before {
+    content: attr(data-label); /* Il faudrait ajouter data-label="Date" sur tes <td> */
+    font-weight: bold;
+    color: #2ecc71;
+    text-align: left;
+  }
 }
 /* Ajoute tes autres styles ici pour coller à la photo */
 </style>

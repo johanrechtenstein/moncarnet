@@ -50,14 +50,27 @@ class MaintenanceController extends Controller
 
         // 1. Validation des données entrantes
         $validated = $request->validate([
-            'date'         => 'required|date',
-            'kilometrage'  => 'required|integer|min:0',
-            'description'  => 'required|string',
+            'date'         => 'sometimes|required|date',
+            'kilometrage'  => 'sometimes|required|integer|min:0',
+            'description'  => 'sometimes|required|string',
             'facture_url'  => 'nullable|string',
-            'categorie_id' => 'required|exists:categories,id',
+            'categorie_id' => 'sometimes|required|exists:categories,id',
             'echeance_km'   => 'nullable|integer',
-            'echeance_date' => 'nullable|date'
+            'echeance_date' => 'nullable|date',
+            'status'        => 'nullable|string'
         ]);
+
+
+    // CAS PARTICULIER : Si on ne change QUE le statut
+    // On fait une mise à jour simple sans créer d'historique
+    if ($request->has('status') && count($validated) === 1) {
+        $maintenance->update(['status' => $validated['status']]);
+        return response()->json([
+            'message' => 'Statut mis à jour',
+            'data' => $maintenance
+        ], 200);
+    }
+
 
     // 2. Vérification du délai de 24h
     // On compare la date de création (created_at) avec maintenant
@@ -80,16 +93,17 @@ class MaintenanceController extends Controller
 
         // On crée la nouvelle version
         $newMaintenance = Maintenance::create([
-            'date'         => $validated['date'],
-            'kilometrage'  => $validated['kilometrage'],
-            'description'  => $validated['description'],
-            'facture_url'  => $validated['facture_url'],
-            'categorie_id' => $validated['categorie_id'],
-            'echeance_km'   => $validated['echeance_km'],   // Nouveau
-            'echeance_date' => $validated['echeance_date'],
+            'date'          => $validated['date'] ?? $maintenance->date,
+            'kilometrage'   => $validated['kilometrage'] ?? $maintenance->kilometrage,
+            'description'   => $validated['description'] ?? $maintenance->description,
+            'facture_url'   => $validated['facture_url'] ?? $maintenance->facture_url,
+            'categorie_id'  => $validated['categorie_id'] ?? $maintenance->categorie_id,
+            'echeance_km'   => $validated['echeance_km'] ?? $maintenance->echeance_km,
+            'echeance_date' => $validated['echeance_date'] ?? $maintenance->echeance_date,
             'car_id'       => $maintenance->car_id,
             'parent_id'    => $maintenance->id, // Lien vers l'ancienne
             'est_obsolete' => false,
+            'status'       => 'active'
             
         ]);
 

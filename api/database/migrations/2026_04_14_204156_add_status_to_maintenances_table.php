@@ -6,22 +6,25 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::table('maintenances', function (Blueprint $table) {
-            // Tes colonnes d'échéances
-            $table->integer('echeance_km')->nullable()->after('kilometrage');
-            $table->date('echeance_date')->nullable()->after('echeance_km');
             
+            // On ajoute le champ status, nullable pour ne pas bloquer l'existant
+            $table->string('status')->nullable()->default('active')->after('description');
         });
     }
 
-    
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::table('maintenances', function (Blueprint $table) {
-            
-        $table->dropColumn(['echeance_km', 'echeance_date']);
-    });
+            $table->dropColumn('status');
+        });
     }
 };

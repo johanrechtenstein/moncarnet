@@ -17,6 +17,7 @@ class Maintenance extends Model
     'parent_id',
     'echeance_km',   // On ajoute ça
     'echeance_date',
+    'status',
 ];
 
 public function car()
