@@ -4,7 +4,7 @@
   </div>
 
   <div v-else class="maintenance-page-wrapper">
-    <div class="maintenance-container">
+    <div class="maintenance-container" :class="containerUrgencyClass">
       
       <div class="maintenance-header">
         <div class="car-info-badge">
@@ -56,9 +56,22 @@
                   </div>
                   <span v-if="!log.echeance_km && !log.echeance_date">-</span>
               </td>
-              <td>{{ log.description }}</td>
+              <td class="description-cell">{{ log.description }}</td>
               <td>{{ log.facture_url || '-' }}</td>
-              <td><span class="edit-icon" style="cursor:pointer">✏️</span></td>
+              <td>
+                <span 
+                v-if="isEditable(log.created_at)" 
+                class="edit-icon" 
+                style="cursor:pointer"
+                @click="openEditForm(log)"
+                >
+                ✏️
+                </span>
+  
+                <span v-else style="opacity: 0.3; cursor: not-allowed;" title="Délai de modification dépassé">
+                🔒
+                </span>
+                </td>
             </tr>
             <tr v-if="maintenanceLogs.length === 0">
               <td colspan="6" style="padding: 20px; color: gray;">Aucun historique pour ce véhicule.</td>
@@ -71,7 +84,7 @@
   <div class="footer-controls">
     <label><input type="checkbox" v-model="hideReleves"> cacher les relevés</label>
     
-    <button class="btn-add-log" @click="showAddForm = !showAddForm">
+    <button class="btn-add-log" @click="resetFormAndOpen()">
       {{ showAddForm ? 'Annuler' : 'Ajouter' }}
     </button>
   </div>
@@ -91,7 +104,9 @@
       <input type="number" v-model="form.echeance_km" placeholder="Échéance (km)">
       <input type="date" v-model="form.echeance_date" title="Date d'échéance">
       
-      <button class="btn-confirm" @click="addMaintenance">Enregistrer</button>
+      <button class="btn-confirm" @click="isEditing ? updateMaintenance() : addMaintenance()">
+      {{ isEditing ? 'Mettre à jour' : 'Enregistrer' }}
+      </button>
     </div>
   </div>
 </div>
@@ -108,6 +123,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
+import { useMaintenance } from '../composables/useMaintenance.js'
+
 
 const route = useRoute()
 const car = ref({})
@@ -116,7 +133,23 @@ const categories = ref([])
 const loading = ref(true)
 const showAddForm = ref(false) 
 const hideReleves = ref(false)
+const isEditing = ref(false)
+const currentEditId = ref(null)
 
+
+
+
+// échéance de la voiture
+const { getEcheanceStatus: calculateStatus, getVehicleStatus } = useMaintenance()
+// Ta computed devient super simple :
+const containerUrgencyClass = computed(() => {
+  return getVehicleStatus(maintenanceLogs.value, car.value.kilometrage)
+})
+
+// On crée une petite fonction locale qui fait le pont avec ta variable réactive
+const getEcheanceStatus = (log) => {
+  return calculateStatus(log, kilometrageActuel.value)
+}
 
 //kilometrage actuel
 const kilometrageActuel = computed(() => {
@@ -150,31 +183,7 @@ const validateMaintenance = async (log) => {
   }
 };
 
-// échéance de la voiture
-const getEcheanceStatus = (log) => {
-  if (log.status === 'validated') return 'ok';
-  const kmActuel = kilometrageActuel.value;
-  const dateActuelle = new Date();
-  let urgency = 'ok';
 
-  
-  // Check KM
-  if (log.echeance_km) {
-    const reste = log.echeance_km - kmActuel;
-    if (reste <= 0) urgency = 'overdue';
-    else if (reste < 1000) urgency = 'soon';
-  }
-
-  // Check Date (si pas déjà en overdue)
-  if (log.echeance_date && urgency !== 'overdue') {
-    const jours = (new Date(log.echeance_date) - dateActuelle) / (1000 * 60 * 60 * 24);
-
-    if (jours <= 0) urgency = 'overdue';
-    else if (jours < 30) urgency = 'soon';
-  }
-
-  return urgency;
-};
 
 // fitrage des données pour ne plus avoir les relevés.
 const filteredLogs = computed(() => {
@@ -213,6 +222,12 @@ const addMaintenance = async () => {
   if (form.value.kilometrage < kilometrageActuel.value) {
     alert(`Erreur : Le kilométrage saisi (${form.value.kilometrage}) est inférieur au compteur actuel (${car.value.kilometrage}).`);
     return; // On arrête tout
+  }
+  // 2. Sécurité : L'échéance future (ex: 215 000)
+  // On ne vérifie que si l'utilisateur a rempli le champ echeance_km
+  if (form.value.echeance_km && form.value.echeance_km <= form.value.kilometrage) {
+    alert(`Erreur : L'échéance (${form.value.echeance_km} km) doit être supérieure au kilométrage de l'intervention actuelle (${form.value.kilometrage} km).`);
+    return;
   }
   try {
     const token = localStorage.getItem('user-token')
@@ -268,6 +283,77 @@ onMounted(() => {
   fetchMaintenanceData() 
   fetchCategories()
 })
+
+// -------------------------------------------------------------------------------------------------------------------------
+//put maintenance
+
+const isEditable = (createdAt) => {
+  if (!createdAt) return false;
+  const diffInHours = (new Date() - new Date(createdAt)) / (1000 * 60 * 60);
+  return diffInHours < 24;
+};
+
+const openEditForm = (log) => {
+  isEditing.value = true
+  currentEditId.value = log.id
+  
+  // On remplit le formulaire avec les données de la ligne cliquée
+  form.value = {date: log.date ? log.date.split('T')[0] : '', // Format YYYY-MM-DD pour l'input date
+    kilometrage: log.kilometrage,
+    description: log.description,
+    echeance_km: log.echeance_km,
+    echeance_date: log.echeance_date ? log.echeance_date.split('T')[0] : '',
+    categorie_id: log.categorie_id || log.categorie?.id, // Très important pour le <select>
+    car_id: route.params.id
+  }
+  
+  showAddForm.value = true // On ouvre le formulaire
+}
+
+const updateMaintenance = async () => {
+  const token = localStorage.getItem('user-token')
+  
+  try {
+    const res = await axios.put(`http://127.0.0.1:8000/api/maintenances/${currentEditId.value}`, form.value, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    // Ton contrôleur PHP renvoie soit 'data' (moins de 24h) soit 'new_entry' (plus de 24h)
+    // Pour ne pas s'embêter, on rafraîchit simplement les données :
+ // On recharge tout pour voir les changements (et l'historique si > 24h)
+    await fetchMaintenanceData()
+    
+    // On ferme et on reset
+    showAddForm.value = false
+    isEditing.value = false
+    currentEditId.value = null
+  } catch (e) {
+    console.error("Erreur modification", e.response?.data)
+  }
+}
+
+//fait un reset du formulaire sinon ajouter restera en "mettre à jours"
+const resetFormAndOpen = () => {
+  if (showAddForm.value) {
+    // Si on ferme, on reset tout
+    isEditing.value = false
+    currentEditId.value = null
+    form.value = { 
+      date: new Date().toISOString().split('T')[0], 
+      kilometrage: '', 
+      description: '', 
+      echeance_km: '', 
+      echeance_date: '', 
+      categorie_id: '', 
+      car_id: route.params.id 
+    }
+  }
+  showAddForm.value = !showAddForm.value
+}
+
+
+
+
 </script>
 
 <style scoped>
@@ -304,12 +390,24 @@ onMounted(() => {
 }
 
 
+/* Ta base reste la même */
 .maintenance-container {
   background: #1a1a1a;
   color: white;
   padding: 20px;
   border-radius: 30px;
-  border: 4px solid #2ecc71; /* Le contour vert de ta maquette */
+  border: 4px solid #2ecc71; /* Vert par défaut (ok) */
+  transition: border-color 0.3s ease; /* Pour un changement de couleur fluide */
+  margin: 20px;
+}
+
+/* On change la bordure selon l'état */
+.maintenance-container.soon {
+  border-color: #ffa500; /* Orange */
+}
+
+.maintenance-container.overdue {
+  border-color: #ff4d4d; /* Rouge */
 }
 
 .maintenance-table {
@@ -328,6 +426,14 @@ onMounted(() => {
   padding: 15px;
   border-bottom: 1px solid #444;
   text-align: center;
+  max-width: 300px; 
+}
+
+.description-cell {
+  max-width: 400px;
+  word-wrap: break-word;    /* Force la coupure des mots trop longs */
+  overflow-wrap: break-word;
+  white-space: normal;      /* Autorise le retour à la ligne */
 }
 
 .car-info-badge {
@@ -386,7 +492,7 @@ onMounted(() => {
 
 
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   /* On cache l'en-tête du tableau qui ne sert plus à rien */
   .maintenance-table thead {
     display: none;

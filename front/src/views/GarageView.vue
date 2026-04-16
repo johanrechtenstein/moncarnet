@@ -9,7 +9,10 @@
       </div>
       
       <div v-else class="cars-grid">
-        <div v-for="car in cars" :key="car.id" class="car-card-simple" @click="goToMaintenance(car.id)" 
+        <div v-for="car in cars" 
+        :key="car.id" class="car-card-simple" 
+        :class="getVehicleStatus(car.maintenances, car.kilometrage)" 
+        @click="goToMaintenance(car.id)" 
          style="cursor: pointer;">
           <button @click.stop="deleteCar(car.id)" class="delete-icon">×</button>
            <div class="car-name-tag">
@@ -54,6 +57,7 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import { useMaintenance } from '../composables/useMaintenance'
 
 const router = useRouter()
 
@@ -61,6 +65,13 @@ const router = useRouter()
 const user = ref({ pseudo: 'Mécanicien' })
 const cars = ref([]) // Notre liste vide au départ
 const showForm = ref(false)
+
+
+
+// fonction état du véhicule
+const { getVehicleStatus } = useMaintenance()
+
+
 
 // Fonction pour récupérer les voitures
 const fetchCars = async () => {
@@ -233,7 +244,7 @@ h1 {
 /* La Carte du véhicule (Style Maquette) */
 .car-card-simple {
   background: #000;
-  border: 4px solid #2ecc71; /* L'anneau vert par défaut */
+  /* border: 4px solid #2ecc71; L'anneau vert par défaut */
   border-radius: 30px;
   padding: 20px;
   width: 250px;
@@ -245,6 +256,24 @@ h1 {
 
 .car-card-simple:hover {
   transform: translateY(-10px);
+}
+
+
+/* Couleur par défaut (si tout va bien) */
+.car-card-simple.ok {
+  border: 2px solid #2ecc71;
+}
+
+/* Si une échéance approche (Orange) */
+.car-card-simple.soon {
+  border: 2px solid #ffa500;
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.2);
+}
+
+/* Si une échéance est dépassée (Rouge) */
+.car-card-simple.overdue {
+  border: 2px solid #ff4d4d;
+  box-shadow: 0 0 15px rgba(255, 77, 77, 0.3);
 }
 
 /* Le bandeau blanc pour le nom */

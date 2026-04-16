@@ -109,7 +109,7 @@ class MaintenanceController extends Controller
 
         return response()->json([
             'message' => 'Maintenance mise à jour (historique créé car > 24h)',
-            'new_entry' => $newMaintenance
+            'new_entry' => $newMaintenance->load('categorie')
         ], 201);
     }
 }
