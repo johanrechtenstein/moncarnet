@@ -16,7 +16,7 @@
         Déconnexion
       </button>
 
-      <button v-else class="btn-inscription">
+      <button v-else @click="$emit('open-register')" class="btn-inscription">
         Inscription
       </button>
     </div>

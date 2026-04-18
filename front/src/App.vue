@@ -1,6 +1,6 @@
 <template>
   <div class="main-container">
-    <Navbar />
+    <Navbar @open-register="showRegister = true" />
 
     <div class="router-content">
     
@@ -10,17 +10,18 @@
       </transition>
       </router-view>
     </div>
-    
+    <RegisterModal :isOpen="showRegister" @close="showRegister = false" />
     <Footer />
   </div>
 </template>
 
 <script setup>
 // 1. On importe le fichier du composant
+import { ref } from 'vue';
 import Navbar from './components/Navbar.vue';
-
+import RegisterModal from './components/RegisterModal.vue';
 import Footer from './components/Footer.vue';
-
+const showRegister = ref(false);
 </script>
 
 <style>

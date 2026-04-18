@@ -7,12 +7,12 @@
         <form @submit.prevent="handleSubmit">
           <div class="input-group">
             <label>Mail de réponse</label>
-            <input type="email" placeholder="Ton email..." v-model="email">
+            <input type="email" placeholder="Ton email..." v-model="email" required>
           </div>
           
           <div class="input-group">
             <label>Message</label>
-            <textarea placeholder="Ton message..." v-model="message"></textarea>
+            <textarea placeholder="Ton message..." v-model="message" required></textarea>
           </div>
           
           <button type="submit" class="btn-send">Envoyer</button>
@@ -37,13 +37,34 @@
 
 <script setup>
 import { ref } from 'vue'
+import axios from 'axios'
 
 const email = ref('')
 const message = ref('')
 
-const handleSubmit = () => {
-  console.log("Données prêtes :", { email: email.value, message: message.value })
-  // On verra plus tard pour l'envoi réel à l'API
+const handleSubmit = async () => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!emailPattern.test(email.value)) {
+    alert("Oups ! L'adresse mail n'est pas valide.");
+    return; // On arrête tout ici
+  }
+
+  if (message.value.length < 10) {
+    alert("Le message est un peu court, non ? (10 caractères min.)");
+    return;
+  }
+  try {
+    const response = await axios.post('http://127.0.0.1:8000/api/contact', {
+      email: email.value,
+      message: message.value
+    });
+    alert("C'est parti ! Message envoyé.");
+    email.value = '';
+    message.value = '';
+  } catch (e) {
+    alert("Erreur : " + (e.response?.data?.message || "Vérifie tes champs"));
+  }
 }
 </script>
 

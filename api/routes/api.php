@@ -20,6 +20,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/check-email', [AuthController::class, 'checkEmail']);
 Route::post('/check-pseudo', [AuthController::class, 'checkPseudo']);
+Route::post('/contact', [AuthController::class, 'sendContact']);
 
 
 //routes privés à partir de là

@@ -10,10 +10,25 @@ use Illuminate\Support\Facades\Auth; // Pour gérer l'authentification
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use App\Mail\ContactMessage; 
+use Illuminate\Support\Facades\Mail;
 
 
 class AuthController extends Controller
 {
+
+    public function sendContact(Request $request) 
+{
+    $data = $request->validate([
+        'email'   => 'required|email:rfc,dns',
+        'message' => 'required|string|min:10',
+    ]);
+
+    // On utilise la classe que tu as créée
+    Mail::to('maxitunnig67@gmail.com')->send(new ContactMessage($data));
+
+    return response()->json(['message' => 'Message envoyé avec succès !']);
+}
 
 
     public function resetPassword(Request $request)
