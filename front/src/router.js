@@ -3,13 +3,25 @@ import HomeView from './views/HomeView.vue';
 import GarageView from './views/GarageView.vue';
 import ContactView from './views/ContactView.vue';
 import MaintenanceView from './views/MaintenanceView.vue';
+import ProfilView from './views/ProfilView.vue';
+import ResetPasswordView from './views/ResetPasswordView.vue';
 
 
 const routes = [
    {
     path: '/contact', // L'URL que l'on cherche
-    name: 'contact',
+    name: 'Contact',
     component: ContactView 
+  },
+   {
+    path: '/reset-password/:token', // L'URL que l'on cherche
+    name: 'ResetPassword',
+    component: ResetPasswordView 
+  },
+    {
+    path: '/profil', // L'URL que l'on cherche
+    name: 'Profil',
+    component:  ProfilView
   },
   {
     path: '/',

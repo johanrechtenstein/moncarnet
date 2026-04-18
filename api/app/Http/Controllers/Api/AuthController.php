@@ -8,9 +8,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash; // Pour crypter le mot de passe
 use Illuminate\Support\Facades\Auth; // Pour gérer l'authentification
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+
 
 class AuthController extends Controller
 {
+
+
+    public function resetPassword(Request $request)
+{
+    $request->validate([
+        'token' => 'required',
+        'email' => 'required|email',
+        'password' => 'required|min:8|confirmed',
+    ]);
+
+    // On utilise le moteur de Laravel pour valider le token et changer le mot de passe
+    $status = Password::broker()->reset(
+        $request->only('email', 'password', 'password_confirmation', 'token'),
+        function ($user, $password) {
+            $user->forceFill([
+                'password' => Hash::make($password) // On hash le nouveau MDP
+            ])->setRememberToken(Str::random(60));
+
+            $user->save();
+        }
+    );
+
+    return $status === Password::PASSWORD_RESET
+        ? response()->json(['message' => 'Votre mot de passe a été réinitialisé !'])
+        : response()->json(['message' => 'Lien invalide ou expiré.'], 400);
+}
+
+
     public function login(Request $request) {
         // 1. On valide que l'utilisateur a bien envoyé un email et un password
         $request->validate([
@@ -145,6 +176,20 @@ public function checkPseudo(Request $request)
     return response()->json(['exists' => $exists]);
 }
 
+public function sendResetLinkEmail(Request $request)
+{
+    // On valide que l'email est fourni
+    $request->validate(['email' => 'required|email']);
 
+    // On demande à Laravel d'envoyer le lien de réinitialisation
+    $status = Password::broker()->sendResetLink(
+        $request->only('email')
+    );
+
+    // Si tout est bon, Laravel renvoie un code de succès
+    return $status === Password::RESET_LINK_SENT
+        ? response()->json(['message' => 'Lien de réinitialisation envoyé ! Vérifiez votre boîte mail.'])
+        : response()->json(['message' => 'Impossible d\'envoyer le mail.'], 400);
+}
 
 }

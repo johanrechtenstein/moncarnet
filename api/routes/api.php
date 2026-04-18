@@ -25,7 +25,8 @@ Route::post('/check-pseudo', [AuthController::class, 'checkPseudo']);
 //routes privés à partir de là
 
 Route::middleware('auth:sanctum')->group(function () {
-
+    
+Route::post('/password/email', [AuthController::class, 'sendResetLinkEmail']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
 Route::put('/user', [AuthController::class, 'update']);
@@ -51,7 +52,15 @@ Route::put('/cars/{id}', [CarController::class, 'update']);
 Route::post('/maintenances', [MaintenanceController::class, 'store']);
 Route::delete('/maintenances/{id}', [MaintenanceController::class, 'destroy']);
 Route::put('/maintenances/{id}', [MaintenanceController::class, 'update']);
-});
-
 // categories
 Route::get('/categories', [CategorieController::class, 'index']);
+});
+
+// Cette ligne est indispensable pour que Laravel ne crash pas lors de l'envoi du mail
+Route::get('/reset-password/{token}', function (Request $request, $token) {
+    // On redirige l'utilisateur vers le port 5173 (Vue.js) 
+    // en passant le token et l'email dans l'adresse
+    return redirect('http://localhost:5173/reset-password/' . $token . '?email=' . $request->email);
+})->name('password.reset');
+//route de reset de password
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
