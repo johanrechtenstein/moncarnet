@@ -74,15 +74,21 @@ const confirmDeleteAccount = async () => {
   if (password) {
     try {
       const token = localStorage.getItem('user-token')
-      await axios.post('http://127.0.0.1:8000/api/user/delete', 
-        { password: password }, // On envoie le password demandé par le contrôleur
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      
+      await axios.delete('http://127.0.0.1:8000/api/user', {
+      // Le 2ème argument contient TOUT
+      headers: { 
+      Authorization: `Bearer ${token}` 
+      },
+      data: { 
+      password: password // On met le body ici pour un DELETE
+      }
+      })
+
       localStorage.removeItem('user-token')
-      router.push('/login')
+      // Optionnel : localStorage.removeItem('user-pseudo')
+      router.push('/')
       alert("Compte supprimé avec succès.")
-    } catch (e) {
+      } catch (e) {
       // On récupère le message d'erreur de Laravel (ex: mot de passe incorrect)
       const errorMsg = e.response?.data?.errors?.password?.[0] || "Erreur lors de la suppression.";
       alert(errorMsg);
