@@ -39,8 +39,8 @@ class CarController extends Controller
         $validated = $request->validate([
             'marque'          => 'required|string|max:100',
             'modele'          => 'required|string|max:100',
+            'vin'             => 'nullable|string|unique:cars|max:17',
             'immatriculation' => 'required|string|unique:cars',
-            //'user_id'         => 'required|exists:users,id', Vérifie que l'user existe
             'image_url'       => 'nullable|string'
         ]);
 

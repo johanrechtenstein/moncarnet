@@ -5,6 +5,7 @@ import ContactView from './views/ContactView.vue';
 import MaintenanceView from './views/MaintenanceView.vue';
 import ProfilView from './views/ProfilView.vue';
 import ResetPasswordView from './views/ResetPasswordView.vue';
+import MentionsView from './views/MentionsView.vue';
 
 
 const routes = [
@@ -12,6 +13,11 @@ const routes = [
     path: '/contact', // L'URL que l'on cherche
     name: 'Contact',
     component: ContactView 
+  },
+  {
+    path: '/mentions', // L'URL que l'on cherche
+    name: 'mentions',
+    component: MentionsView 
   },
    {
     path: '/reset-password/:token', // L'URL que l'on cherche

@@ -13,7 +13,7 @@
   <div class="label-header">
     <label>E-mail</label>
     <button @click="isEditingEmail = !isEditingEmail" class="btn-edit-small">
-      {{ isEditingEmail ? 'annuler' : 'modifier' }}
+      {{ isEditingEmail ? 'annuler' : 'modifier mon email' }}
     </button>
   </div>
 
@@ -141,18 +141,28 @@ const updateEmail = async () => {
 
 
 <style scoped>
+
+.maintenance-page-wrapper{
+   background-color: rgba(0, 0, 0, 0.9); /* Fond noir opaque */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  padding: 30px;
+  border-radius: 15px;
+}
+
+
 .profile-card {
   max-width: 500px;
-  margin: 100px auto; /* Pour le centrer un peu plus bas */
-  padding: 40px;
-  background-color: #1a1a1a; /* Fond noir solide comme ta table */
-  border: 2px solid #FF6B35; /* Ta bordure verte */
+  margin:  auto; 
+  padding: 30px;
+  background-color: rgba(0, 0, 0, 0.9); 
+  border: 2px solid white;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  border-radius: 15px;
 }
 
 .profile-title {
   color: white;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
   text-transform: uppercase;
   letter-spacing: 2px;
 }
@@ -163,7 +173,7 @@ const updateEmail = async () => {
 }
 
 .info-group label {
-  color: #FF6B35;
+  color: white;
   font-size: 0.8em;
   font-weight: bold;
   display: block;
@@ -172,7 +182,7 @@ const updateEmail = async () => {
 }
 
 .info-value {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
   padding: 12px 20px;
   border-radius: 15px;
@@ -261,4 +271,15 @@ const updateEmail = async () => {
   font-weight: bold;
   cursor: pointer;
 }
+
+
+
+@media (max-width: 440px) {
+.profile-card{
+  padding: 15px;
+}
+}
+
+
+
 </style>

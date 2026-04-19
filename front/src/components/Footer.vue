@@ -2,8 +2,7 @@
   <footer class="site-footer">
     <nav class="footer-nav">
         <router-link to="/contact" class="nav-item">Contact</router-link>
-        <a href="#" class="nav-item">RGPD</a>
-        <a href="#" class="nav-item">Mentions Légales</a>
+        <router-link to="/mentions" class="nav-item">Mentions Légales</router-link>
     </nav>
     <p class="copyright">Mon Garage 2026</p>
   </footer>

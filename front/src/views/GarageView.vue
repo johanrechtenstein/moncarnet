@@ -14,6 +14,7 @@
         :class="getVehicleStatus(car.maintenances, car.kilometrage)" 
         @click="goToMaintenance(car.id)" 
          style="cursor: pointer;">
+         
           <button @click.stop="deleteCar(car.id)" class="delete-icon">×</button>
            <div class="car-name-tag">
           {{ car.marque }} {{ car.modele }}
@@ -23,9 +24,26 @@
         <img src="../assets/voiture1.png" style="border-radius: 15px; width: 50%;">
       </div>
 
-      <div class="plate-display">
-        {{ car.immatriculation }}
-      </div>
+     <div class="plate-container" @click.stop> <div v-if="editingId !== car.id" @click="startEdit(car)" class="plate-display clickable-plate">
+    {{ car.immatriculation }}
+    <span class="edit-hint">✎</span>
+  </div>
+
+  <div v-else class="plate-edit">
+  <input 
+    v-model="tempPlate" 
+    @keyup.enter="updatePlate(car)" 
+    @blur="updatePlate(car)"
+    v-focus
+    class="plate-input"
+    placeholder="AA-123-BB"
+  >
+</div>
+</div>
+
+      <div class="vin-display">
+            VIN: {{ car.vin }}
+          </div>
         </div>
       </div>
     </div>
@@ -40,6 +58,7 @@
         <form @submit.prevent="addVehicle" class="form-inline">
         <input v-model="newCar.marque" placeholder="Marque" required>
         <input v-model="newCar.modele" placeholder="Modèle" required>
+        <input v-model="newCar.vin" placeholder="VIN (Optionnel)" maxlength="17" style="text-transform: uppercase;">
         <input v-model="newCar.immatriculation" placeholder="Immatriculation" required>
         
         <div class="form-buttons">
@@ -54,23 +73,40 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { useMaintenance } from '../composables/useMaintenance'
 
 const router = useRouter()
-
-
 const user = ref({ pseudo: 'Mécanicien' })
 const cars = ref([]) // Notre liste vide au départ
 const showForm = ref(false)
+const editingId = ref(null)
+const tempPlate = ref('')
+const vFocus = { mounted: (el) => el.focus() }
 
-
+// Active le mode édition pour une carte
+const startEdit = (car) => {
+  editingId.value = car.id
+  tempPlate.value = car.immatriculation
+}
 
 // fonction état du véhicule
 const { getVehicleStatus } = useMaintenance()
 
+const newCar = ref({
+  marque: '',          // Au lieu de brand
+  modele: '',          // Au lieu de model
+  vin: '',
+  immatriculation: '', // Au lieu de plate
+  image_url: 'default_car.png' // Valeur par défaut pour l'instant
+})
+
+// Force les majuscules sur le VIN pendant la saisie
+watch(() => newCar.value.vin, (newVal) => {
+  if (newVal) newCar.value.vin = newVal.toUpperCase()
+})
 
 
 // Fonction pour récupérer les voitures
@@ -109,17 +145,6 @@ onMounted(() => {
 })
 
 
-
-
-// ajout de voiture
-
-const newCar = ref({
-  marque: '',          // Au lieu de brand
-  modele: '',          // Au lieu de model
-  immatriculation: '', // Au lieu de plate
-  image_url: 'default_car.png' // Valeur par défaut pour l'instant
-})
-
 const addVehicle = async () => {
   try {
     const token = localStorage.getItem('user-token')
@@ -130,11 +155,9 @@ const addVehicle = async () => {
     console.log("Véhicule ajouté !", response.data)
     
    // Reset du formulaire
-    newCar.value = { marque: '', modele: '', immatriculation: '', image_url: 'default_car.png'  }
+    newCar.value = { marque: '', modele: '', vin: '', immatriculation: '', image_url: 'default_car.png'  }
     showForm.value = false
-
     await fetchCars()
-    
     // Ici, il faudra rafraîchir la liste (on verra ça juste après)
   } catch (error) {
     console.error("Erreur lors de l'ajout", error)
@@ -157,6 +180,30 @@ const deleteCar = async (id) => {
     }
   }
 }
+
+
+// Enregistre la nouvelle plaque
+const updatePlate = async (car) => {
+  if (!tempPlate.value || tempPlate.value === car.immatriculation) {
+    editingId.value = null
+    return
+  }
+
+  try {
+    const token = localStorage.getItem('user-token')
+    await axios.put(`http://127.0.0.1:8000/api/cars/${car.id}`, 
+      { immatriculation: tempPlate.value },
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    
+    editingId.value = null
+    fetchCars() // On rafraîchit la liste
+  } catch (error) {
+    console.error("Erreur lors de la modification de la plaque :", error)
+    alert("Cette plaque est peut-être déjà utilisée.")
+  }
+}
+
 
 </script>
 
@@ -277,7 +324,7 @@ h1 {
 }
 
 /* Le bandeau blanc pour le nom */
-.car-name-tag {
+.car-name-tag, .plate-display {
   background: white;
   color: black;
   border-radius: 20px;
@@ -290,14 +337,8 @@ h1 {
 
 /* Style de l'immatriculation */
 .plate-display {
-  font-family: 'Courier New', Courier, monospace;
-  background: #f0f0f0;
-  color: #333;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
+  position: relative; /* Indispensable */
+} 
 
 /* Bouton Ajouter/confirmer */
 .btn-add, .btn-confirm {
@@ -353,6 +394,79 @@ h1 {
 .delete-icon:hover {
   
   transform: scale(1.3);
+}
+
+/* .clickable-plate {
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 5px 15px;
+  transition: background-color 0.2s;
+} */
+
+.clickable-plate:hover {
+  background-color: #e0e0e0; /* Un léger gris au survol pour montrer que c'est cliquable */
+}
+
+/* Le crayon dans l'angle supérieur droit */
+.edit-hint {
+  position: absolute;
+  top: -5px;    /* Sort légèrement vers le haut */
+  right: -5px;  /* Sort légèrement vers la droite */
+  
+  background: white;    /* Petit fond blanc pour le détacher */
+  border: 1px solid #FF6B35;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  color: #FF6B35;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+
+.edit-hint:hover {
+  transform: scale(1.2);
+  background-color: #FF6B35;
+  color: white;
+}
+
+
+.plate-input {
+  /* On copie le look de la plaque */
+  background: white;
+  color: black;
+  border-radius: 20px;
+  padding: 5px 15px;
+  font-weight: bold;
+  
+  /* On enlève les bordures d'input par défaut */
+  border: none;
+  outline: none; /* Enlève le contour bleu au clic */
+  
+  /* On centre le texte et on force les majuscules */
+  text-align: center;
+  text-transform: uppercase;
+  
+  /* On s'assure qu'il prend la même place que la plaque */
+  width: 80%; 
+  display: inline-block;
+  font-family: inherit; /* Utilise la même police que le reste */
+  font-size: 1rem;
+}
+
+.vin-display {
+  font-size: 0.7rem;
+  color: #888;
+  margin-top: 5px;
 }
 
 

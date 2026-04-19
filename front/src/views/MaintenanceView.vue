@@ -10,78 +10,14 @@
         <div class="car-info-badge">
           <img src="../assets/voiture1.png" class="mini-car-img">
           <div class="plate-number">{{ car.immatriculation }}</div>
+          <div class="plate-number">{{ car.vin }}</div>
           <div class="car-model">{{ car.marque }} | {{ car.modele }}</div>
           <button class="close-btn" @click="$router.push('/garage')">retour</button>
         </div>
       </div>
 
-      <div class="table-container">
-        <table class="maintenance-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>catégorie</th>
-              <th>date</th>
-              <th>kilométrage</th>
-              <th>prochain entretien</th><th>description</th>
-              <th>facture</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="log in filteredLogs" :key="log.id">
-              <td>
-  <div class="action-cell">
-    <button 
-      v-if="getEcheanceStatus(log) !== 'ok' && log.status !== 'validated'" 
-      @click="validateMaintenance(log)"
-      class="btn-small-validate"
-      title="Marquer comme effectué"
-    >
-      à faire
-    </button>
 
-    <span v-else class="edit-icon" style="cursor:pointer">🟢</span>
-  </div>
-</td>
-              <td>{{ log.categorie?.nom || 'N/A' }}</td>
-              <td>{{ new Date(log.date).toLocaleDateString() }}</td>
-              <td>{{ log.kilometrage }} km</td>
-              <td>
-                  <div v-if="log.echeance_km" class="echeance-badge km"  :class="getEcheanceStatus(log)">
-                  {{ log.echeance_km }} km
-                  </div>
-                  <div v-if="log.echeance_date" class="echeance-badge date"  :class="getEcheanceStatus(log)">
-                  {{ new Date(log.echeance_date).toLocaleDateString() }}
-                  </div>
-                  <span v-if="!log.echeance_km && !log.echeance_date">-</span>
-              </td>
-              <td class="description-cell">{{ log.description }}</td>
-              <td>{{ log.facture_url || '-' }}</td>
-              <td>
-                <span 
-                v-if="isEditable(log.created_at)" 
-                class="edit-icon" 
-                style="cursor:pointer"
-                @click="openEditForm(log)"
-                >
-                ✏️
-                </span>
-  
-                <span v-else style="opacity: 0.3; cursor: not-allowed;" title="Délai de modification dépassé">
-                🔒
-                </span>
-                </td>
-            </tr>
-            <tr v-if="maintenanceLogs.length === 0">
-              <td colspan="6" style="padding: 20px; color: gray;">Aucun historique pour ce véhicule.</td>
-            </tr>
-          </tbody>
-        </table>
-        
-        <div class="table-footer">
-        
-  <div class="footer-controls">
+      <div class="header-controls">
     <label><input type="checkbox" v-model="hideReleves"> cacher les relevés</label>
     
     <button class="btn-add-log" @click="resetFormAndOpen()">
@@ -109,13 +45,82 @@
       </button>
     </div>
   </div>
+
+      <div class="table-container">
+        <table class="maintenance-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>catégorie</th>
+              <th>date</th>
+              <th>kilométrage</th>
+              <th>prochain entretien</th><th>description</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="log in filteredLogs" :key="log.id">
+              <td>
+  <div class="action-cell">
+    <button 
+      v-if="getEcheanceStatus(log) !== 'ok' && log.status !== 'validated'" 
+      @click="validateMaintenance(log)"
+      class="btn-small-validate"
+      title="Marquer comme effectué"
+    >
+      à faire
+    </button>
+
+    <span v-else class="edit-icon" style="cursor:pointer">🟢</span>
+  </div>
+</td>
+              <td data-label="Catégorie">{{ log.categorie?.nom || 'N/A' }}</td>
+              <td data-label="date">{{ new Date(log.date).toLocaleDateString() }}</td>
+              <td data-label="km">{{ log.kilometrage }} km</td>
+              <td data-label="échéance">
+                  <div v-if="log.echeance_km" class="echeance-badge km"  :class="getEcheanceStatus(log)">
+                  {{ log.echeance_km }} km
+                  </div>
+                  <div v-if="log.echeance_date" class="echeance-badge date"  :class="getEcheanceStatus(log)">
+                  {{ new Date(log.echeance_date).toLocaleDateString() }}
+                  </div>
+                  <span v-if="!log.echeance_km && !log.echeance_date">-</span>
+              </td>
+              <td data-label="description" class="description-cell">{{ log.description }}</td>
+              
+              <td>
+                <span 
+                v-if="isEditable(log.created_at)" 
+                class="edit-icon" 
+                style="cursor:pointer"
+                @click="openEditForm(log)"
+                >
+                ✏️
+                </span>
+  
+                <span v-else style="opacity: 0.3; cursor: not-allowed;" title="Délai de modification dépassé">
+                🔒
+                </span>
+                </td>
+            </tr>
+            <tr v-if="maintenanceLogs.length === 0">
+              <td colspan="6" style="padding: 20px; color: gray;">Aucun historique pour ce véhicule.</td>
+            </tr>
+          </tbody>
+        </table>
+        
+       
+        
+  
+
+  
 </div>
      
         </div>
       </div>
 
       
-    </div>
+    
   
 </template>
 
@@ -210,7 +215,12 @@ const form = ref({
 // 1. Charger les catégories pour le menu déroulant
 const fetchCategories = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/categories')
+    const token = localStorage.getItem('user-token');
+    const res = await axios.get('http://127.0.0.1:8000/api/categories', {
+      headers: { 
+        Authorization: `Bearer ${token}` 
+      }
+    });
     categories.value = res.data
     console.log("Catégories récupérées :", categories.value)
   } catch (e) { console.error("Erreur catégories", e) }
@@ -386,7 +396,8 @@ const resetFormAndOpen = () => {
 
 
 .mini-car-img{
-  width: 50px;
+  width: 100px;
+  border-radius: 15px;
 }
 
 
@@ -399,6 +410,7 @@ const resetFormAndOpen = () => {
   border: 4px solid #2ecc71; /* Vert par défaut (ok) */
   transition: border-color 0.3s ease; /* Pour un changement de couleur fluide */
   margin: 20px;
+  width: 80vw;
 }
 
 /* On change la bordure selon l'état */
@@ -440,9 +452,10 @@ const resetFormAndOpen = () => {
   display: flex;
   align-items: center;
   gap: 20px;
-  background: rgba(255,255,255,0.1);
+   background: #222; /* Fond légèrement plus clair que la page */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
   padding: 10px 30px;
-  border-radius: 50px;
+  border-radius: 15px;
 }
 
 .table-footer {
@@ -452,7 +465,8 @@ const resetFormAndOpen = () => {
   gap: 15px;
 }
 
-.footer-controls {
+.header-controls {
+  margin: 20px auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -492,38 +506,84 @@ const resetFormAndOpen = () => {
 
 
 
-@media (max-width: 1024px) {
-  /* On cache l'en-tête du tableau qui ne sert plus à rien */
+@media (max-width: 880px) {
+
+  .maintenance-container {
+    width: 90vw; /* Au lieu de 80vw */
+    margin: 10px auto;
+    padding: 10px;
+  }
+
+ .maintenance-table, 
+  .maintenance-table tbody, 
+  .maintenance-table tr {
+    display: block;
+    width: 100%;
+  }
+
   .maintenance-table thead {
     display: none;
   }
 
-  /* Chaque ligne devient une "carte" */
   .maintenance-table tr {
-    display: block;
-    margin-bottom: 15px;
-    border: 1px solid #444;
-    border-radius: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #333;
+    border-radius: 12px;
     padding: 10px;
-    background: rgba(255,255,255,0.05);
+    background: #222; /* Fond légèrement plus clair que la page */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    box-sizing: border-box;
   }
 
-  /* Chaque cellule s'affiche l'une sous l'autre */
   .maintenance-table td {
     display: flex;
     justify-content: space-between;
-    text-align: right;
+    align-items: center;
     border-bottom: 1px solid #333;
-    padding: 8px 5px;
+    padding: 12px 5px;
+    font-size: 0.95em;
+    width: 100%; /* Force la ligne à prendre toute la largeur de la carte */
+    box-sizing: border-box;
+    text-align: right;
+    max-width: none;
+   
   }
 
-  /* On peut rajouter le nom de la colonne avant la valeur avec du CSS */
+  /* Supprimer la bordure sur la dernière cellule de la carte */
+  .maintenance-table td:last-child {
+    border-bottom: none;
+  }
+
+  /* Style des labels à gauche */
   .maintenance-table td::before {
-    content: attr(data-label); /* Il faudrait ajouter data-label="Date" sur tes <td> */
-    font-weight: bold;
-    color: #2ecc71;
+    content: attr(data-label);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75em;
+    color: #FF6B35; /* Ton vert fétiche */
+    letter-spacing: 0.5px;
+    flex: 1;
     text-align: left;
+    margin-right: 15px;
+  }
+
+  /* Gestion de la description pour qu'elle ne casse pas le layout */
+  .description-cell {
+    flex-direction: flex; /* Label en haut, texte en dessous */
+    text-align: left !important;
+    
+  }
+
+  .description-cell::before {
+    margin-bottom: 8px;
+  }
+
+  /* Ajustement du badge véhicule en haut */
+  .car-info-badge {
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
   }
 }
-/* Ajoute tes autres styles ici pour coller à la photo */
+
 </style>

@@ -50,7 +50,18 @@ const form = reactive({
   password_confirmation: ''
 })
 
-const close = () => emit('close')
+const close = () => {
+  resetForm()
+  emit('close')
+}
+
+// La fonction qui remet tout à zéro
+const resetForm = () => {
+  form.pseudo = ''
+  form.email = ''
+  form.password = ''
+  form.password_confirmation = ''
+}
 
 const handleRegister = async () => {
   loading.value = true
@@ -60,7 +71,7 @@ const handleRegister = async () => {
     // On stocke le token car ton backend le renvoie direct !
     localStorage.setItem('user-token', response.data.access_token)
     localStorage.setItem('user-pseudo', response.data.user.pseudo)
-    
+    resetForm()
     close()
     router.push('/garage')
   } catch (e) {

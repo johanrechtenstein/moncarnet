@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Car extends Model
 {
-    protected $fillable = ['marque', 'modele', 'immatriculation', 'image_url', 'user_id'];
+    protected $fillable = ['marque', 'modele', 'vin', 'immatriculation', 'image_url', 'user_id'];
 
     public function maintenances()
     {

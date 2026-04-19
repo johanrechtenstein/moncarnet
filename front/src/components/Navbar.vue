@@ -6,17 +6,23 @@
       </router-link>
     </div>
 
-    <div class="nav-links">
-      <router-link to="/contact" class="nav-item">Contact</router-link>
-      <router-link v-if="isLoggedIn" to="/profil" class="nav-item">Profil</router-link>
-      <router-link v-if="isLoggedIn" to="/garage" class="nav-item">Mon garage</router-link>
-      <router-link v-if="!isLoggedIn" to="/" class="nav-item">Accueil</router-link>
+    <div class="hamburger" @click="toggleMenu" :class="{ 'is-active': isMenuOpen }">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
 
-      <button v-if="isLoggedIn" @click="logout" class="btn-inscription">
+    <div class="nav-links" :class="{ 'open': isMenuOpen }">
+      <router-link to="/contact" class="nav-item" @click="closeMenu">Contact</router-link>
+      <router-link v-if="isLoggedIn" to="/profil" class="nav-item" @click="closeMenu">Profil</router-link>
+      <router-link v-if="isLoggedIn" to="/garage" class="nav-item" @click="closeMenu">Mon garage</router-link>
+      <router-link v-if="!isLoggedIn" to="/" class="nav-item" @click="closeMenu">Accueil</router-link>
+
+      <button v-if="isLoggedIn" @click="handleLogout" class="btn-inscription">
         Déconnexion
       </button>
 
-      <button v-else @click="$emit('open-register')" class="btn-inscription">
+      <button v-else @click="handleRegisterClick" class="btn-inscription">
         Inscription
       </button>
     </div>
@@ -31,23 +37,37 @@ import { useRouter, useRoute } from 'vue-router'
 const router = useRouter()
 const route = useRoute()
 const isLoggedIn = ref(false)
+const isMenuOpen = ref(false)
+const emit = defineEmits(['open-register'])
 
 const checkLoginStatus = () => {
   isLoggedIn.value = !!localStorage.getItem('user-token')
 }
+
+
+  const toggleMenu = () => {
+  isMenuOpen.value = !isMenuOpen.value
+}
+
+const closeMenu = () => {
+  isMenuOpen.value = false
+}
+
+const handleRegisterClick = () => {
+  closeMenu()
+  emit('open-register')
+}
+
 
 // 1. On vérifie au chargement initial
 onMounted(() => {
   checkLoginStatus()
 })
 
-// 2. MAGIE : On surveille chaque changement de page (route)
-// Dès que l'URL change (ex: de / vers /garage), on revérifie le token
-watch(() => route.path, () => {
-  checkLoginStatus()
-})
 
-const logout = async () => {
+const handleLogout = async () => {
+  closeMenu()
+  
   try {
     const token = localStorage.getItem('user-token')
     
@@ -65,6 +85,11 @@ const logout = async () => {
     router.push('/')
   }
 }
+
+watch(() => route.path, () => {
+  checkLoginStatus()
+  closeMenu()
+})
 </script>
 
 <style scoped>
@@ -132,5 +157,51 @@ const logout = async () => {
   background-color: white; /* Un orange un peu plus sombre au survol */
   transform: translateY(-2px); /* Un léger mouvement vers le haut */
   color:#FF6B35;
+}
+
+
+/* --- menu burger --- */
+
+.hamburger {
+  display: none; /* Caché sur PC */
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.hamburger span {
+  width: 30px;
+  height: 3px;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+/* Animation du hamburger en "X" quand il est actif */
+.hamburger.is-active span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+.hamburger.is-active span:nth-child(2) { opacity: 0; }
+.hamburger.is-active span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
+@media (max-width: 900px) {
+  .hamburger { display: flex; }
+
+  .nav-links {
+    position: fixed;
+    top: 0;
+    right: -100%; /* Caché à droite */
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.95); /* Fond sombre */
+    flex-direction: column;
+    justify-content: center;
+    gap: 30px;
+    transition: 0.4s ease;
+  }
+
+  .nav-links.open {
+    right: 0; /* Apparaît ! */
+  }
+
+  .nav-item { font-size: 1.5rem; }
 }
 </style>

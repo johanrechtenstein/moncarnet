@@ -55,8 +55,8 @@ const showRegister = ref(false);
   z-index: 10;
   flex: 1; /* Cela force le contenu à prendre toute la place entre le header et le footer */
   display: flex;
-  justify-content: center; /* Centre le contenu horizontalement */
-  align-items: center;     /* Centre le contenu verticalement */
+  justify-content: center; 
+  align-items: center;     
   width: 100%;
   overflow: hidden;
 }
