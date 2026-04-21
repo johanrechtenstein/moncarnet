@@ -5,7 +5,7 @@
       <p>"Suivez l'<span class="highlight">entretien</span> de votre véhicule en temps réel, car son <span class="highlight">passé</span> vous le rendra dans le <span class="highlight">futur</span>."</p>
     </div>
 
-    <div class="hero-form">
+    <form @submit.prevent="login" class="hero-form">
       <div class="form-group">
         <label>Pseudo :</label>
         <input v-model="pseudo" type="text" placeholder="Pseudo" />
@@ -13,9 +13,15 @@
       <div class="form-group">
         <label>Mot de passe :</label>
         <input v-model="password" type="password" placeholder="••••••••" />
+        <div class="forgot-password-container">
+        <span @click="router.push('/forgot-password')" class="link-orange">
+        Mot de passe oublié ?
+        </span>
+        </div>
       </div>
-      <button @click="login" class="btn-connexion">Connexion</button>
-    </div>
+      
+      <button type="submit" class="btn-connexion">Connexion</button>
+    </form>
   </div>
 </template>
 
@@ -129,7 +135,23 @@ input {
   color:#FF6B35;
 }
 
+.forgot-password-container {
+  width: 100%;
+  text-align: right; /* Aligne le lien à droite sous l'input */
+  margin-top: 8px;
+}
 
+.link-orange {
+  color: #FF6B35;
+  font-size: 0.85rem;
+  text-decoration: underline; /* Le soulignement comme sur l'image */
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.link-orange:hover {
+  opacity: 0.8; /* Petit effet au survol */
+}
 
 
 /* --- LE BLOC MAGIQUE POUR MOBILE --- */

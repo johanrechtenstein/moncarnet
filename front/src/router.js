@@ -6,6 +6,7 @@ import MaintenanceView from './views/MaintenanceView.vue';
 import ProfilView from './views/ProfilView.vue';
 import ResetPasswordView from './views/ResetPasswordView.vue';
 import MentionsView from './views/MentionsView.vue';
+import ForgotPasswordView from './views/ForgotPasswordView.vue';
 
 
 const routes = [
@@ -15,12 +16,17 @@ const routes = [
     component: ContactView 
   },
   {
+    path: '/forgot-password', // L'URL que l'on cherche
+    name: 'forgot-password',
+    component: ForgotPasswordView 
+  },
+  {
     path: '/mentions', // L'URL que l'on cherche
     name: 'mentions',
     component: MentionsView 
   },
    {
-    path: '/reset-password/:token', // L'URL que l'on cherche
+    path: '/reset-password/', // L'URL que l'on cherche
     name: 'ResetPassword',
     component: ResetPasswordView 
   },

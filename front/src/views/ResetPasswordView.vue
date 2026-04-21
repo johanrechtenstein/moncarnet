@@ -35,7 +35,7 @@ const loading = ref(false);
 const message = ref('');
 
 const form = reactive({
-  token: route.params.token, // Le token est récupéré dans l'URL
+  token: route.query.token, // Le token est récupéré dans l'URL
   email: route.query.email,  // On récupérera l'email aussi dans l'URL
   password: '',
   password_confirmation: ''

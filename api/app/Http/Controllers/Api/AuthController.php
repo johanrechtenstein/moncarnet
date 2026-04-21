@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Mail;
 
 class AuthController extends Controller
 {
+    
 
     public function sendContact(Request $request) 
 {
@@ -44,7 +45,7 @@ class AuthController extends Controller
         $request->only('email', 'password', 'password_confirmation', 'token'),
         function ($user, $password) {
             $user->forceFill([
-                'password' => Hash::make($password) // On hash le nouveau MDP
+                'password' => $password // On ne hash pas le nouveau MDP, laravel s'en charge avec le model.
             ])->setRememberToken(Str::random(60));
 
             $user->save();
