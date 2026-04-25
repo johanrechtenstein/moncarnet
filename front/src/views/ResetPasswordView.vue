@@ -15,7 +15,7 @@
         </div>
 
         <button type="submit" :disabled="loading">
-          {{ loading ? 'Mise à jour...' : 'Mettre à jour le mot de passe' }}
+          {{ loading ? 'Mise à jour...' : 'Mettre à jour' }}
         </button>
       </form>
 
@@ -27,7 +27,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+import api from '../services/api'
 
 const route = useRoute();
 const router = useRouter();
@@ -35,8 +35,8 @@ const loading = ref(false);
 const message = ref('');
 
 const form = reactive({
-  token: route.query.token, // Le token est récupéré dans l'URL
-  email: route.query.email,  // On récupérera l'email aussi dans l'URL
+  token: route.query.token, // Le token est récupéré dans la requête
+  email: route.query.email,  // On récupère l'email aussi dans la requête
   password: '',
   password_confirmation: ''
 });
@@ -44,7 +44,8 @@ const form = reactive({
 const handleReset = async () => {
   loading.value = true;
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/reset-password', form);
+    await api.get('/sanctum/csrf-cookie');
+    const response = await api.post('/api/reset-password', form);
     message.value = "Mot de passe modifié avec succès !";
     setTimeout(() => router.push('/'), 1000);
   } catch (error) {
@@ -117,7 +118,7 @@ button {
   width: 100%;
   padding: 14px;
   background-color: #FF6B35;
-  color: white;
+  color: #1a1a1a;
   border: none;
   border-radius: 8px;
   cursor: pointer;

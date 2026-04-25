@@ -2,7 +2,7 @@
   <nav class="navbar">
     <div class="logo">
       <router-link :to="isLoggedIn ? '/garage' : '/'">  <!-- expression ternaire -->
-        <img src="../assets/logo2.png" alt="Logo MG" class="logo-img">
+        <img src="../assets/logo2.webp" alt="Logo MG" class="logo-img">
       </router-link>
     </div>
 
@@ -31,7 +31,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import axios from 'axios'
+import api from '../services/api'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
@@ -40,10 +40,12 @@ const isLoggedIn = ref(false)
 const isMenuOpen = ref(false)
 const emit = defineEmits(['open-register'])
 
-const checkLoginStatus = () => {
-  isLoggedIn.value = !!localStorage.getItem('user-token')
+const checkLoginStatus = async () => {
+  const hasFlag = localStorage.getItem('is_logged') === 'true'
+  // Si le flag est à true, on pourrait vérifier si le token existe vraiment
+  // ou si l'API nous répond toujours 200 sur un endpoint léger (/api/user)
+  isLoggedIn.value = hasFlag
 }
-
 
   const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value
@@ -58,30 +60,18 @@ const handleRegisterClick = () => {
   emit('open-register')
 }
 
-
-// 1. On vérifie au chargement initial
-onMounted(() => {
-  checkLoginStatus()
-})
-
-
 const handleLogout = async () => {
   closeMenu()
-  
   try {
-    const token = localStorage.getItem('user-token')
-    
+    // On réinitialise d'abord le state pour l'UI (Réactivité immédiate)
+    isLoggedIn.value = false
     // On prévient l'API Laravel qu'on se déconnecte
-    await axios.post('http://127.0.0.1:8000/api/logout', {}, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    await api.post('/api/logout')
   } catch (error) {
     console.error("Erreur lors de la déconnexion", error)
   } finally {
-    // Dans tous les cas, on nettoie le navigateur et on redirige
-    localStorage.removeItem('user-token')
-    localStorage.removeItem('user-pseudo')
-    isLoggedIn.value = false
+    // 3. NETTOYAGE TOTAL (Renforcement sécurité)
+    localStorage.clear() // On vire tout : is_logged, pseudo, token...
     router.push('/')
   }
 }
@@ -89,6 +79,12 @@ const handleLogout = async () => {
 watch(() => route.path, () => {
   checkLoginStatus()
   closeMenu()
+})
+
+// On écoute aussi les événements de storage (si tu ouvres 2 onglets)
+onMounted(() => {
+  checkLoginStatus()
+  window.addEventListener('storage', checkLoginStatus)
 })
 </script>
 
@@ -116,8 +112,8 @@ watch(() => route.path, () => {
 }
 
 .logo-img {
-  height: 50px; /* Ajuste la hauteur selon tes envies */
-  width: auto;  /* Garde les proportions */
+  height: 49px; /* Ajuste la hauteur selon tes envies */
+  width: 60px;  /* Garde les proportions */
   display: block;
 }
 .nav-links {
@@ -142,7 +138,7 @@ watch(() => route.path, () => {
 .btn-inscription {
   /* Fond orange saumon, texte noir */
   background-color: #FF6B35; 
-  color: white;
+  color: #1A1A1A;
   
   border: none;
   padding: 12px 28px; /* Un bouton un peu plus grand */

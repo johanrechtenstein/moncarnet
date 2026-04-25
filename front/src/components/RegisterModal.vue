@@ -7,12 +7,15 @@
       <form @submit.prevent="handleRegister">
         <div class="input-group">
           <label>Pseudo</label>
-          <input type="text" v-model="form.pseudo" required placeholder="Ton pseudo">
+          <input type="text" v-model="form.pseudo" @blur="verifyPseudo" placeholder="Ton pseudo">
+          <span v-if="pseudoStatus === 'taken'" class="error-text">Ce pseudo est déjà utilisé.</span>
+          <span v-if="pseudoStatus === 'available'" class="success-text">Pseudo disponible !</span>
         </div>
 
         <div class="input-group">
           <label>Email</label>
-          <input type="email" v-model="form.email" required placeholder="exemple@mail.com">
+          <input type="email" v-model="form.email" @blur="verifyEmail" placeholder="exemple@mail.com">
+          <span v-if="emailStatus === 'taken'" class="error-text">Cet email est déjà inscrit.</span>
         </div>
 
         <div class="input-group">
@@ -35,13 +38,15 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import axios from 'axios'
+import api from '../services/api'
 import { useRouter } from 'vue-router'
 
 const props = defineProps(['isOpen'])
 const emit = defineEmits(['close'])
 const router = useRouter()
 const loading = ref(false)
+const emailStatus = ref('') // 'taken' ou 'available'
+const pseudoStatus = ref('')
 
 const form = reactive({
   pseudo: '',
@@ -61,24 +66,48 @@ const resetForm = () => {
   form.email = ''
   form.password = ''
   form.password_confirmation = ''
+  pseudoStatus.value = ''
+  emailStatus.value = ''
+}
+
+const verifyPseudo = async () => {
+    if (form.pseudo.length < 3) return
+    try {
+        const response = await api.post('/api/check-pseudo', { pseudo: form.pseudo })
+        pseudoStatus.value = response.data.exists ? 'taken' : 'available'
+    } catch (e) { console.error(e) }
+}
+
+const verifyEmail = async () => {
+    if (!form.email.includes('@')) return
+    try {
+        const response = await api.post('/api/check-email', { email: form.email })
+        emailStatus.value = response.data.exists ? 'taken' : 'available'
+    } catch (e) { console.error(e) }
 }
 
 const handleRegister = async () => {
   loading.value = true
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/register', form)
+    await api.get('/sanctum/csrf-cookie')
+    const response = await api.post('/api/register', form)
     
     // On stocke le token car ton backend le renvoie direct !
-    localStorage.setItem('user-token', response.data.access_token)
+    localStorage.setItem('is_logged', 'true')
     localStorage.setItem('user-pseudo', response.data.user.pseudo)
     resetForm()
     close()
     router.push('/garage')
-  } catch (e) {
-    alert(e.response?.data?.message || "Erreur lors de l'inscription")
-  } finally {
-    loading.value = false
-  }
+ } catch (e) {
+    if (e.response?.data?.errors) {
+        // Au lieu d'un message générique, on prend la première erreur de validation
+        // Exemple : "L'adresse email est déjà utilisée."
+        const firstError = Object.values(e.response.data.errors)[0][0];
+        alert(firstError);
+    } else {
+        alert(e.response?.data?.message || "Erreur lors de l'inscription");
+    }
+}
 }
 </script>
 
@@ -124,4 +153,20 @@ input:focus {
   background: #FF6B35; color: white; border: none;
   border-radius: 25px; font-weight: bold; cursor: pointer;
 }
+
+
+.error-text {
+  color: #ff4444;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: block;
+}
+
+.success-text {
+  color: #00c851;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: block;
+}
+
 </style>

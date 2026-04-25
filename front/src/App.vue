@@ -1,7 +1,7 @@
 <template>
   <div class="main-container">
     <Navbar @open-register="showRegister = true" />
-
+    <main>
     <div class="router-content">
     
       <router-view v-slot="{ Component }">
@@ -10,6 +10,7 @@
       </transition>
       </router-view>
     </div>
+  </main>
     <RegisterModal :isOpen="showRegister" @close="showRegister = false" />
     <Footer />
   </div>
@@ -28,7 +29,7 @@ const showRegister = ref(false);
 
 .main-container {
   /* On pointe vers ton image dans assets */
-  background-image: url('./assets/ACM.png');
+  background-image: url('./assets/ACM.webp');
   
   /* L'image couvre tout sans se déformer */
   background-size: cover;
@@ -67,7 +68,7 @@ const showRegister = ref(false);
 /* 1. Pendant que ça bouge */
 .nfs-enter-active,
 .nfs-leave-active {
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); /* Transition "nerveuse" */
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); /* Transition "nerveuse" */
 }
 
 /* 2. État de départ (Arrivée de la droite) */
@@ -83,7 +84,7 @@ const showRegister = ref(false);
 }
 
 /*désactive effet pour accessibilité*/
-@media (prefers-reduced-motion: reduce) {
+@media (max-width: 768px) {
   .nfs-enter-active, .nfs-leave-active {
     transition: none !important;
   }

@@ -18,9 +18,13 @@ class ContactMessage extends Mailable
     }
 
     public function build()
-    {
-        return $this->subject('Nouveau message de contact')
-                    ->html("Nom de l'envoyeur: " . $this->data['email'] . "<br>Message: " . $this->data['message']);
-    }
+{
+    // e() transforme les < en &lt;, donc le script devient du simple texte inoffensif
+    $safeEmail = e($this->data['email']);
+    $safeMessage = nl2br(e($this->data['message'])); // nl2br garde les retours à la ligne
+
+    return $this->subject('Nouveau message de contact')
+                ->html("<b>De :</b> $safeEmail <br><b>Message :</b><br> $safeMessage");
+}
 
 }

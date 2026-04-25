@@ -40,7 +40,7 @@ class CarController extends Controller
             'marque'          => 'required|string|max:100',
             'modele'          => 'required|string|max:100',
             'vin'             => 'nullable|string|unique:cars|max:17',
-            'immatriculation' => 'required|string|unique:cars',
+            'immatriculation' => 'required|string|max:14',
             'image_url'       => 'nullable|string'
         ]);
 
@@ -68,7 +68,7 @@ class CarController extends Controller
 
         $validated = $request->validate([
             // On vérifie l'unique, mais on ignore l'ID actuel pour ne pas bloquer si on ne change pas la plaque
-            'immatriculation' => 'sometimes|string|unique:cars,immatriculation,' . $id,
+            'immatriculation' => 'sometimes|string|max:14',
             'image_url'       => 'nullable|string',
         ]);
 

@@ -1,55 +1,46 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomeView from './views/HomeView.vue';
-import GarageView from './views/GarageView.vue';
-import ContactView from './views/ContactView.vue';
-import MaintenanceView from './views/MaintenanceView.vue';
-import ProfilView from './views/ProfilView.vue';
-import ResetPasswordView from './views/ResetPasswordView.vue';
-import MentionsView from './views/MentionsView.vue';
-import ForgotPasswordView from './views/ForgotPasswordView.vue';
-
+import HomeView from './views/HomeView.vue'; // On garde la home en direct pour un affichage immédiat
 
 const routes = [
-   {
-    path: '/contact', // L'URL que l'on cherche
-    name: 'Contact',
-    component: ContactView 
-  },
-  {
-    path: '/forgot-password', // L'URL que l'on cherche
-    name: 'forgot-password',
-    component: ForgotPasswordView 
-  },
-  {
-    path: '/mentions', // L'URL que l'on cherche
-    name: 'mentions',
-    component: MentionsView 
-  },
-   {
-    path: '/reset-password/', // L'URL que l'on cherche
-    name: 'ResetPassword',
-    component: ResetPasswordView 
-  },
-    {
-    path: '/profil', // L'URL que l'on cherche
-    name: 'Profil',
-    component:  ProfilView
-  },
   {
     path: '/',
     name: 'home',
     component: HomeView
   },
   {
-    path: '/garage', // L'URL que l'on cherche
-    name: 'garage',
-    // C'est ici que tu créeras ton futur composant DashboardView.vue
-    component: GarageView 
+    path: '/contact',
+    name: 'Contact',
+    component: () => import('./views/ContactView.vue') // Lazy Loading
   },
   {
-  path: '/maintenance/:id',
-  name: 'Maintenance',
-  component: MaintenanceView
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('./views/ForgotPasswordView.vue')
+  },
+  {
+    path: '/mentions',
+    name: 'mentions',
+    component: () => import('./views/MentionsView.vue')
+  },
+  {
+    path: '/reset-password/',
+    name: 'ResetPassword',
+    component: () => import('./views/ResetPasswordView.vue')
+  },
+  {
+    path: '/profil',
+    name: 'Profil',
+    component: () => import('./views/ProfilView.vue')
+  },
+  {
+    path: '/garage',
+    name: 'garage',
+    component: () => import('./views/GarageView.vue')
+  },
+  {
+    path: '/maintenance/:id',
+    name: 'Maintenance',
+    component: () => import('./views/MaintenanceView.vue')
   }  
 ];
 

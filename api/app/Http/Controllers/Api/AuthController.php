@@ -22,13 +22,20 @@ class AuthController extends Controller
 {
     $data = $request->validate([
         'email'   => 'required|email:rfc,dns',
-        'message' => 'required|string|min:10',
+        'message' => 'required|string|min:10|max:5000',
     ]);
+    // 2. Nettoyage XSS (On enlève les balises <script>, etc.)
+    // strip_tags transforme "<b>Salut</b>" en "Salut"
+    $data['message'] = strip_tags($data['message']);
 
-    // On utilise la classe que tu as créée
-    Mail::to('maxitunnig67@gmail.com')->send(new ContactMessage($data));
-
-    return response()->json(['message' => 'Message envoyé avec succès !']);
+    // 3. Envoi (On garde ta logique)
+    try {
+        Mail::to('maxitunnig67@gmail.com')->send(new ContactMessage($data));
+        return response()->json(['message' => 'Message envoyé avec succès !']);
+    } catch (\Exception $e) {
+        // En cas de problème technique (serveur mail en panne)
+        return response()->json(['message' => 'Désolé, l\'envoi a échoué.'], 500);
+    }
 }
 
 
@@ -49,6 +56,7 @@ class AuthController extends Controller
             ])->setRememberToken(Str::random(60));
 
             $user->save();
+            $user->tokens()->delete();
         }
     );
 
@@ -72,19 +80,14 @@ class AuthController extends Controller
             ], 401); // 401 = Non autorisé
         }
 
-        // 3. Si on arrive ici, c'est que les identifiants sont bons !
-        $user = User::where('pseudo', $request->pseudo)->firstOrFail();
-
-        // Optionnel : Supprime tous les anciens tokens de cet utilisateur avant d'en créer un nouveau
-        $user->tokens()->delete();
-
-        // 4. On génère un NOUVEAU token pour cette session
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // IMPORTANT : On régénère la session pour éviter le vol de session (Fixation)
+        $request->session()->regenerate();
 
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
+            'message' => 'Connexion réussie',
+            'user' => Auth::user(),
         ]);
+        // On ne renvoie PLUS de access_token, c'est le cookie qui fait tout le travail !
         }
 
 
@@ -92,7 +95,7 @@ class AuthController extends Controller
     {
         // 1. La validation (on vérifie que l'email est unique et le mot de passe assez long)
         $validated = $request->validate([
-            'pseudo' => 'required|string|max:255',
+            'pseudo' => 'required|string|max:255|unique:users',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed', // 'confirmed' attend un champ password_confirmation
         ]);
@@ -104,22 +107,21 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']), // On crypte !
         ]);
 
-        // 3. ON UTILISE LE SUPER-POUVOIR ICI !
-        // On génère la "clé" pour cet utilisateur
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // On connecte l'utilisateur tout de suite pour créer sa session
+        Auth::login($user);
+        $request->session()->regenerate();
 
-        // 4. On renvoie le tout au client (Vue.js)
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
+            'message' => 'Inscription réussie',
             'user' => $user
         ], 201);
     }
 
     public function logout(Request $request)
     {
-        // On récupère l'utilisateur qui fait la demande et on supprime son token actuel
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken(); // On réinitialise le jeton CSRF
 
         return response()->json([
             'message' => 'Déconnexion réussie'
@@ -139,16 +141,22 @@ public function destroy(Request $request)
     // 2. On vérifie si le mot de passe correspond
     if (!Hash::check($request->password, $user->password)) {
         throw ValidationException::withMessages([
-            'password' => ['Le mot de passe est incorrect. Suppression annulée.'],
+            'password' => ['Le mot de passe est incorrect.'],
         ]);
     }
 
-    // 3. Si c'est bon, on nettoie les tokens et on supprime l'utilisateur
-    $user->tokens()->delete();
+   // 1. Déconnexion manuelle
+    Auth::guard('web')->logout();
+
+    // 2. Destruction de la session (très important avant de supprimer l'user)
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    // 3. Suppression de l'utilisateur en base
     $user->delete();
 
     return response()->json([
-        'message' => 'Votre compte et toutes vos données ont été supprimés.'
+        'message' => 'Compte supprimé avec succès.'
     ], 200);
 }
 

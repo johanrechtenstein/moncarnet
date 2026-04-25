@@ -1,0 +1,14 @@
+User-agent: *
+
+# Pages autorisées
+Allow: /
+Allow: /contact
+Allow: /mentions
+
+# Pages à cacher (tout ce qui commence par /user ou /dashboard)
+Disallow: /garage/
+Disallow: /reset-password/
+Disallow: /profil/
+Disallow: /maintenance/
+Disallow: /forgot-password/
+Disallow: /api/

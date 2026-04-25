@@ -20,7 +20,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/check-email', [AuthController::class, 'checkEmail']);
 Route::post('/check-pseudo', [AuthController::class, 'checkPseudo']);
-Route::post('/contact', [AuthController::class, 'sendContact']);
+Route::post('/contact', [AuthController::class, 'sendContact'])->middleware('throttle:3,1');
 Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail']);
 
 
@@ -65,4 +65,4 @@ Route::get('/reset-password/{token}', function (Request $request, $token) {
     return redirect('http://localhost:5173/reset-password/' . $token . '?email=' . $request->email);
 })->name('password.reset');
 //route de reset de password
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');

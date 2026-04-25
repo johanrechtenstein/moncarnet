@@ -8,7 +8,7 @@
       
       <div class="maintenance-header">
         <div class="car-info-badge">
-          <img src="../assets/voiture1.png" class="mini-car-img">
+          <img src="../assets/voiture1.webp" class="mini-car-img" alt="icone de voiture">
           <div class="plate-number">{{ car.immatriculation }}</div>
           <div class="plate-number">{{ car.vin }}</div>
           <div class="car-model">{{ car.marque }} | {{ car.modele }}</div>
@@ -106,28 +106,17 @@
             <tr v-if="maintenanceLogs.length === 0">
               <td colspan="6" style="padding: 20px; color: gray;">Aucun historique pour ce véhicule.</td>
             </tr>
-          </tbody>
-        </table>
-        
-       
-        
-  
-
-  
-</div>
-     
+            </tbody>
+          </table>
+          </div>   
         </div>
       </div>
-
-      
-    
-  
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import axios from 'axios'
+import api from '../services/api.js'
 import { useMaintenance } from '../composables/useMaintenance.js'
 
 
@@ -141,65 +130,6 @@ const hideReleves = ref(false)
 const isEditing = ref(false)
 const currentEditId = ref(null)
 
-
-
-
-// échéance de la voiture
-const { getEcheanceStatus: calculateStatus, getVehicleStatus } = useMaintenance()
-// Ta computed devient super simple :
-const containerUrgencyClass = computed(() => {
-  return getVehicleStatus(maintenanceLogs.value, car.value.kilometrage)
-})
-
-// On crée une petite fonction locale qui fait le pont avec ta variable réactive
-const getEcheanceStatus = (log) => {
-  return calculateStatus(log, kilometrageActuel.value)
-}
-
-//kilometrage actuel
-const kilometrageActuel = computed(() => {
-  if (maintenanceLogs.value.length === 0) return car.value.kilometrage;
-
-  // On extrait tous les kilométrages des logs, on ajoute celui de base, 
-  // et on prend le maximum.
-  const kms = maintenanceLogs.value.map(log => log.kilometrage);
-  return Math.max(...kms, car.value.kilometrage || 0);
-});
-
-
-//fonction pour désactiver l'alerte
-const validateMaintenance = async (log) => {
-  try {
-    const token = localStorage.getItem('user-token');
-    
-    // On envoie UNIQUEMENT le statut pour déclencher le "Cas Particulier" du contrôleur
-    const res = await axios.put(`http://127.0.0.1:8000/api/maintenances/${log.id}`, 
-      { status: 'validated' }, 
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    // Si l'API répond OK, on met à jour l'objet localement pour éteindre le rouge
-    log.status = 'validated';
-    
-    console.log("Maintenance validée avec succès");
-  } catch (e) {
-    console.error("Erreur lors de la validation :", e.response?.data || e.message);
-    alert("Erreur lors de la mise à jour du statut.");
-  }
-};
-
-
-
-// fitrage des données pour ne plus avoir les relevés.
-const filteredLogs = computed(() => {
-  if (hideReleves.value) {
-    // On garde tout SAUF ceux dont la catégorie est "Relevé" (ID 1 par exemple)
-    // Adapte l'ID ou le nom selon ta base de données
-    return maintenanceLogs.value.filter(log => log.categorie?.nom !== 'Relevé')
-  }
-  return maintenanceLogs.value
-})
-
 // Objet pour le formulaire d'ajout
 const form = ref({
   date: new Date().toISOString().split('T')[0], // Aujourd'hui par défaut
@@ -212,42 +142,80 @@ const form = ref({
   car_id: route.params.id
 })
 
+// échéance de la voiture
+const { getEcheanceStatus: calculateStatus, getVehicleStatus } = useMaintenance()
+
+//kilometrage actuel
+const kilometrageActuel = computed(() => {
+  if (maintenanceLogs.value.length === 0) return car.value.kilometrage;
+  // On extrait tous les kilométrages des logs, on ajoute celui de base, 
+  // et on prend le maximum.
+  const kms = maintenanceLogs.value.map(log => log.kilometrage);
+  return Math.max(...kms, car.value.kilometrage || 0);
+});
+
+// Ta computed devient super simple :
+const containerUrgencyClass = computed(() => {
+  return getVehicleStatus(maintenanceLogs.value, car.value.kilometrage)
+})
+
+// fitrage des données pour ne plus avoir les relevés.
+const filteredLogs = computed(() => {
+  if (hideReleves.value) {
+    // On garde tout SAUF ceux dont la catégorie est "Relevé" (ID 1 par exemple)
+    // Adapte l'ID ou le nom selon ta base de données
+    return maintenanceLogs.value.filter(log => log.categorie?.nom !== 'Relevé')
+  }
+  return maintenanceLogs.value
+})
+
+// On crée une petite fonction locale qui fait le pont avec ta variable réactive
+const getEcheanceStatus = (log) => {
+  return calculateStatus(log, kilometrageActuel.value)
+}
+
+const isEditable = (createdAt) => {
+  if (!createdAt) return false;
+  const diffInHours = (new Date() - new Date(createdAt)) / (1000 * 60 * 60);
+  return diffInHours < 24;
+};
+
+//fonction pour désactiver l'alerte
+const validateMaintenance = async (log) => {
+  try {
+    const res = await api.put(`/api/maintenances/${log.id}`, { 
+      status: 'validated' 
+    });
+    log.status = 'validated';
+  } catch (e) {
+    console.error("Erreur lors de la validation :", e.response?.data || e.message);
+    alert("Erreur lors de la mise à jour du statut.");
+  }
+};
+
 // 1. Charger les catégories pour le menu déroulant
 const fetchCategories = async () => {
   try {
-    const token = localStorage.getItem('user-token');
-    const res = await axios.get('http://127.0.0.1:8000/api/categories', {
-      headers: { 
-        Authorization: `Bearer ${token}` 
-      }
-    });
+    const res = await api.get('/api/categories');
     categories.value = res.data
-    console.log("Catégories récupérées :", categories.value)
   } catch (e) { console.error("Erreur catégories", e) }
 }
 
-// 2. Envoyer la nouvelle maintenance
 const addMaintenance = async () => {
   // Sécurité : le kilométrage saisi doit être >= au kilométrage actuel
   if (form.value.kilometrage < kilometrageActuel.value) {
     alert(`Erreur : Le kilométrage saisi (${form.value.kilometrage}) est inférieur au compteur actuel (${car.value.kilometrage}).`);
-    return; // On arrête tout
+    return; 
   }
-  // 2. Sécurité : L'échéance future (ex: 215 000)
   // On ne vérifie que si l'utilisateur a rempli le champ echeance_km
   if (form.value.echeance_km && form.value.echeance_km <= form.value.kilometrage) {
     alert(`Erreur : L'échéance (${form.value.echeance_km} km) doit être supérieure au kilométrage de l'intervention actuelle (${form.value.kilometrage} km).`);
     return;
   }
   try {
-    const token = localStorage.getItem('user-token')
-    const res = await axios.post('http://127.0.0.1:8000/api/maintenances', form.value, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    
+    const res = await api.post('/api/maintenances', form.value)
     // On ajoute le résultat (qui contient .categorie grâce au .load()) au tableau
     maintenanceLogs.value.unshift(res.data)
-    
     // Reset du formulaire
     form.value.description = ''
     form.value.kilometrage = ''
@@ -262,26 +230,17 @@ const addMaintenance = async () => {
 
 const fetchMaintenanceData = async () => {
   try {
-    const token = localStorage.getItem('user-token')
     const carId = route.params.id
-
-    const res = await axios.get(`http://127.0.0.1:8000/api/cars/${carId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    
+    const res = await api.get(`/api/cars/${carId}`)
     // On extrait l'objet voiture
     const carData = res.data.data
-    
     if (carData) {
       car.value = carData
       // ON UTILISE carData ICI AUSSI !
-      maintenanceLogs.value = carData.maintenances || []
-      
-      console.log("Données de la voiture chargées :", carData)
+      maintenanceLogs.value = carData.maintenances || []    
     } else {
       console.warn("Aucune donnée trouvée pour cette voiture.")
     }
-
   } catch (error) {
     console.error("Erreur de chargement :", error)
   } finally {
@@ -289,50 +248,27 @@ const fetchMaintenanceData = async () => {
   }
 }
 
-onMounted(() => {
-  fetchMaintenanceData() 
-  fetchCategories()
-})
 
-// -------------------------------------------------------------------------------------------------------------------------
-//put maintenance
-
-const isEditable = (createdAt) => {
-  if (!createdAt) return false;
-  const diffInHours = (new Date() - new Date(createdAt)) / (1000 * 60 * 60);
-  return diffInHours < 24;
-};
 
 const openEditForm = (log) => {
   isEditing.value = true
   currentEditId.value = log.id
-  
-  // On remplit le formulaire avec les données de la ligne cliquée
   form.value = {date: log.date ? log.date.split('T')[0] : '', // Format YYYY-MM-DD pour l'input date
     kilometrage: log.kilometrage,
     description: log.description,
     echeance_km: log.echeance_km,
     echeance_date: log.echeance_date ? log.echeance_date.split('T')[0] : '',
-    categorie_id: log.categorie_id || log.categorie?.id, // Très important pour le <select>
+    categorie_id: log.categorie_id || log.categorie?.id, 
     car_id: route.params.id
   }
-  
-  showAddForm.value = true // On ouvre le formulaire
+  showAddForm.value = true 
 }
 
 const updateMaintenance = async () => {
-  const token = localStorage.getItem('user-token')
-  
   try {
-    const res = await axios.put(`http://127.0.0.1:8000/api/maintenances/${currentEditId.value}`, form.value, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-
+    const res = await api.put(`/api/maintenances/${currentEditId.value}`, form.value)
     // Ton contrôleur PHP renvoie soit 'data' (moins de 24h) soit 'new_entry' (plus de 24h)
-    // Pour ne pas s'embêter, on rafraîchit simplement les données :
- // On recharge tout pour voir les changements (et l'historique si > 24h)
     await fetchMaintenanceData()
-    
     // On ferme et on reset
     showAddForm.value = false
     isEditing.value = false
@@ -344,25 +280,25 @@ const updateMaintenance = async () => {
 
 //fait un reset du formulaire sinon ajouter restera en "mettre à jours"
 const resetFormAndOpen = () => {
-  if (showAddForm.value) {
-    // Si on ferme, on reset tout
     isEditing.value = false
     currentEditId.value = null
     form.value = { 
       date: new Date().toISOString().split('T')[0], 
-      kilometrage: '', 
+      kilometrage:kilometrageActuel.value,
       description: '', 
       echeance_km: '', 
       echeance_date: '', 
       categorie_id: '', 
       car_id: route.params.id 
     }
-  }
   showAddForm.value = !showAddForm.value
 }
 
 
-
+onMounted(() => {
+  fetchMaintenanceData() 
+  fetchCategories()
+})
 
 </script>
 

@@ -1,22 +1,17 @@
 import axios from 'axios';
 
-// On crée une instance personnalisée
 const api = axios.create({
-    baseURL: 'http://localhost:8000/api', // L'URL de ton Laravel
-    timeout: 5000, // Sécurité : on abandonne après 5s si le serveur ne répond pas
+    baseURL: import.meta.env.VITE_API_URL, // ATTENTION : On enlève /api ici pour pouvoir appeler /sanctum/
+    withCredentials: true,
+    withXSRFToken: true,            // INDISPENSABLE pour les cookies
+    timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     }
 });
 
-// Ce "middleware" (intercepteur) ajoute ton token à chaque appel
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
+// Plus besoin d'intercepteur pour ajouter le "Bearer Token" !
+// Le navigateur gère le cookie de session et le token CSRF automatiquement.
 
 export default api;

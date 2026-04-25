@@ -1,9 +1,15 @@
 <template>
   <div class="garage-page">
+    <img 
+      src="../assets/maintenance2.webp" 
+      alt="" 
+      class="background-image-host"
+      fetchpriority="high"
+    >
 
-    <h1 style="color: white;">Garage de {{ user.pseudo }}</h1>
+    <h1 style="color: white; position: relative; z-index: 1;">Garage de {{ user.pseudo }}</h1>
 
-    <div class="garage-content">
+    <div class="garage-content" style="position: relative; z-index: 1;">
       <div v-if="cars.length === 0" style="color: gray;">
         Aucun véhicule dans votre garage.
       </div>
@@ -21,7 +27,7 @@
       </div>
   
       <div style="margin: 20px 0;">
-        <img src="../assets/voiture1.png" style="border-radius: 15px; width: 50%;">
+        <img src="../assets/voiture1.webp" alt="image de voiture" style="border-radius: 15px; width: 50%;">
       </div>
 
      <div class="plate-container" @click.stop> <div v-if="editingId !== car.id" @click="startEdit(car)" class="plate-display clickable-plate">
@@ -74,7 +80,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import axios from 'axios'
+import api from '../services/api'
 import { useRouter } from 'vue-router'
 import { useMaintenance } from '../composables/useMaintenance'
 
@@ -92,7 +98,6 @@ const startEdit = (car) => {
   tempPlate.value = car.immatriculation
 }
 
-// fonction état du véhicule
 const { getVehicleStatus } = useMaintenance()
 
 const newCar = ref({
@@ -100,80 +105,55 @@ const newCar = ref({
   modele: '',          // Au lieu de model
   vin: '',
   immatriculation: '', // Au lieu de plate
-  image_url: 'default_car.png' // Valeur par défaut pour l'instant
+  image_url: 'voiture1.webp' // Valeur par défaut pour l'instant
 })
 
-// Force les majuscules sur le VIN pendant la saisie
+
 watch(() => newCar.value.vin, (newVal) => {
   if (newVal) newCar.value.vin = newVal.toUpperCase()
 })
 
-
-// Fonction pour récupérer les voitures
 const fetchCars = async () => {
   try {
-    const token = localStorage.getItem('user-token')
-    const response = await axios.get('http://127.0.0.1:8000/api/cars', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    const response = await api.get('/api/cars')
     cars.value = response.data // On remplit notre liste avec la réponse
   } catch (error) {
     console.error("Erreur lors de la récupération :", error)
+    if (error.response?.status === 401) {
+      router.push('/')
   }
 }
-
-
-const goToMaintenance = (carId) => {
-  // On redirige vers une route dynamique, ex: /maintenance/5
-  router.push(`/maintenance/${carId}`)
 }
 
-
+const goToMaintenance = (carId) => {
+  router.push(`/maintenance/${carId}`)
+}
 
 // On lance la récupération dès que la page s'affiche
 onMounted(() => {
   const savedPseudo = localStorage.getItem('user-pseudo')
-  if (savedPseudo) if (savedPseudo) {
-    // Si savedPseudo est "Jean", user.value.pseudo devient "Jean"
-    user.value.pseudo = savedPseudo
-  } else {
-    user.value.pseudo = 'Mécanicien'
-  }
- 
-  fetchCars()
-
+  user.value.pseudo = savedPseudo || 'Mécanicien'
+   fetchCars()
 })
-
 
 const addVehicle = async () => {
   try {
-    const token = localStorage.getItem('user-token')
-    const response = await axios.post('http://127.0.0.1:8000/api/cars', newCar.value, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    
-    console.log("Véhicule ajouté !", response.data)
-    
-   // Reset du formulaire
-    newCar.value = { marque: '', modele: '', vin: '', immatriculation: '', image_url: 'default_car.png'  }
+    await api.get('/sanctum/csrf-cookie')
+    const response = await api.post('/api/cars', newCar.value)
+    newCar.value = { marque: '', modele: '', vin: '', immatriculation: '', image_url: 'voiture1.webp'  }
     showForm.value = false
     await fetchCars()
-    // Ici, il faudra rafraîchir la liste (on verra ça juste après)
-  } catch (error) {
+    } catch (error) {
     console.error("Erreur lors de l'ajout", error)
+    alert(error.response?.data?.message || "Erreur lors de l'ajout du véhicule")
   }
 }
 
 // suppression de voiture
 const deleteCar = async (id) => {
-  if (confirm("Voulez-vous vraiment retirer ce véhicule du garage ?")) {
+  if (confirm("Voulez-vous vraiment supprimer ce véhicule?")) {
     try {
-      const token = localStorage.getItem('user-token')
-      await axios.delete(`http://127.0.0.1:8000/api/cars/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      
-      // On recharge la liste pour mettre à jour l'affichage
+      await api.delete(`/api/cars/${id}`)
       fetchCars()
     } catch (error) {
       console.error("Erreur lors de la suppression :", error)
@@ -181,30 +161,21 @@ const deleteCar = async (id) => {
   }
 }
 
-
 // Enregistre la nouvelle plaque
 const updatePlate = async (car) => {
   if (!tempPlate.value || tempPlate.value === car.immatriculation) {
     editingId.value = null
     return
   }
-
   try {
-    const token = localStorage.getItem('user-token')
-    await axios.put(`http://127.0.0.1:8000/api/cars/${car.id}`, 
-      { immatriculation: tempPlate.value },
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    
+    await api.put(`api/cars/${car.id}`, { immatriculation: tempPlate.value })
     editingId.value = null
-    fetchCars() // On rafraîchit la liste
+    fetchCars() 
   } catch (error) {
     console.error("Erreur lors de la modification de la plaque :", error)
     alert("Cette plaque est peut-être déjà utilisée.")
   }
 }
-
-
 </script>
 
 <style scoped>
@@ -269,15 +240,43 @@ h1 {
   width: 95%;        /* Prend 95% de l'écran, donc 2.5% de marge de chaque côté */
   max-width: 1400px; /* Mais ne devient pas géant sur un écran 4K */
   padding: 60px 20px;
-  background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('../assets/maintenance2.png'); /* Fond sombre */
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
+  position: relative; /* Indispensable pour positionner l'image derrière */
+  overflow: hidden;
   color: white;
   border-radius: 30px;
   box-sizing: border-box;
+  
 }
 
+
+/* 2. On place l'image en fond */
+.background-image-host {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Equivalent du background-size: cover */
+  z-index: 0;        /* Derrière tout le monde */
+}
+
+/* 3. On recrée le dégradé sombre (le voile) */
+.garage-page::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7); /* Ton linear-gradient simplifié */
+  z-index: 1; /* Entre l'image et le texte */
+}
+
+/* 4. On s'assure que tout le contenu passe au-dessus du voile */
+.garage-page > *:not(.background-image-host) {
+  position: relative;
+  z-index: 2;
+}
 
 /* La grille des voitures */
 .garage-content {
@@ -343,7 +342,7 @@ h1 {
 /* Bouton Ajouter/confirmer */
 .btn-add, .btn-confirm {
   background-color: #27ae60;
-  color: white;
+  color: #1a1a1a;
   border: none;
   padding: 15px 30px;
   border-radius: 25px;
@@ -396,16 +395,6 @@ h1 {
   transform: scale(1.3);
 }
 
-/* .clickable-plate {
-  cursor: pointer;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 5px 15px;
-  transition: background-color 0.2s;
-} */
 
 .clickable-plate:hover {
   background-color: #e0e0e0; /* Un léger gris au survol pour montrer que c'est cliquable */

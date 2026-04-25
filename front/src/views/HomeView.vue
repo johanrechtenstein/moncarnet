@@ -20,46 +20,45 @@
         </div>
       </div>
       
-      <button type="submit" class="btn-connexion">Connexion</button>
+      <button type="submit" class="btn-connexion":disabled="loading">Connexion</button>
     </form>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import api from '../services/api'
 import { useRouter } from 'vue-router' // Pour rediriger l'utilisateur après
 
 // On crée deux variables "réactives" pour stocker ce que l'utilisateur tape
 const pseudo = ref('')
 const password = ref('')
 const router = useRouter()
+const loading = ref(false)
 
 // On crée une fonction qui sera appelée quand on clique sur le bouton
 const login = async () => {
+  if (!pseudo.value || !password.value) return alert("Remplis tous les champs !");
+  loading.value = true
   try {
-    // On envoie les données à l'API
-    // Remplace l'URL par celle de ton backend plus tard
-    const response = await axios.post('http://127.0.0.1:8000/api/login', {
+    await api.get('/sanctum/csrf-cookie')
+    const response = await api.post('/api/login', {
       pseudo: pseudo.value,
       password: password.value
     });
-console.log("Voici ce que le PHP a envoyé :", response.data);
-    // Si l'API répond avec succès
-    const token = response.data.access_token || response.data.token;
-    if (token) {
-      // On stocke le jeton de sécurité (Token) dans le navigateur
-      localStorage.setItem('user-token', token);
-      localStorage.setItem('user-pseudo', pseudo.value);   
-      // On redirige vers le garage (le dashboard)
+    // Mise à jour du stockage local pour le Front-end
+    // On n'utilise plus de 'user-token' car c'est géré par cookie
+    localStorage.setItem('is_logged', 'true')
+    // On récupère le pseudo renvoyé par le PHP
+    const userPseudo = response.data.user?.pseudo || pseudo.value
+    localStorage.setItem('user-pseudo', userPseudo)
       router.push('/garage'); 
-    }else {
-      // Au cas où l'API répond 200 mais sans token (peu probable mais utile pour débugger)
-      console.log("Réponse reçue mais pas de token :", response.data);
-    }
   } catch (error) {
-    console.error("Erreur de connexion :", error);
-    alert("Identifiants incorrects ou serveur injoignable.");
+    console.error("Erreur de connexion :", error)
+    const message = error.response?.data?.message || "Identifiants incorrects ou serveur injoignable."
+    alert(message)
+  } finally {
+    loading.value = false
   }
 }
 </script>
@@ -67,22 +66,20 @@ console.log("Voici ce que le PHP a envoyé :", response.data);
 <style scoped>
 .hero-container {
   display: flex;
-  justify-content: space-evenly; /* Espace entre les deux blocs */
-  /*align-items: center;*/
+  justify-content: space-evenly; 
   align-items: flex-start;
   padding: 0 5%;
   flex-grow: 1; /* Prend tout l'espace central entre la nav et le footer */
-  
-}
+  }
 
 /* Style commun aux deux blocs (le fond noir transparent) */
 .hero-text, .hero-form {
-  background: rgba(0, 0, 0, 0.75); /* Noir bien opaque */
+  background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(5px);      /* Floute légèrement l'image derrière (très moderne) */
   padding: 30px;
-  border-radius: 50px;             /* Bords très arrondis comme sur ta maquette */
+  border-radius: 50px;            
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Petit liseré discret */
+  border: 1px solid rgba(255, 255, 255, 0.1); 
 }
 
 .hero-text {
@@ -95,11 +92,11 @@ console.log("Voici ce que le PHP a envoyé :", response.data);
 }
 
 .hero-form {
-  width: 320px; /* On stabilise la largeur de la capsule */
+  width: 320px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  align-items: center; /* Centre le bouton Connexion */
+  align-items: center; 
   padding: 40px 30px;
   box-sizing: border-box;
   margin-left: 20px;
@@ -109,16 +106,15 @@ console.log("Voici ce que le PHP a envoyé :", response.data);
 input {
   width: 100%;
   padding: 12px;
-  border-radius: 25px; /* Inputs arrondis aussi */
+  border-radius: 25px;
   border: none;
   margin-top: 5px;
   box-sizing: border-box;
-  
 }
 
 .btn-connexion {
   background-color: #FF6B35;
-  color: white;
+  color: #1A1A1A;
   border: none;
   padding: 15px;
   border-radius: 30px;
@@ -130,48 +126,46 @@ input {
 }
 
 .btn-connexion:hover {
-  background-color: white; /* Un orange un peu plus sombre au survol */
-  transform: translateY(-2px); /* Un léger mouvement vers le haut */
+  background-color: white;
+  transform: translateY(-2px);
   color:#FF6B35;
 }
 
 .forgot-password-container {
   width: 100%;
-  text-align: right; /* Aligne le lien à droite sous l'input */
+  text-align: right; 
   margin-top: 8px;
 }
 
 .link-orange {
   color: #FF6B35;
   font-size: 0.85rem;
-  text-decoration: underline; /* Le soulignement comme sur l'image */
+  text-decoration: underline; /* Le soulignement  */
   cursor: pointer;
   transition: opacity 0.2s;
 }
 
 .link-orange:hover {
-  opacity: 0.8; /* Petit effet au survol */
+  opacity: 0.8; 
 }
 
-
-/* --- LE BLOC MAGIQUE POUR MOBILE --- */
 @media (max-width: 768px) {
   .hero-container {
-    flex-direction: column; /* On empile au lieu de mettre côte à côte */
-    align-items: center;    /* On centre tout le monde */
-    padding-top: 5rem;      /* On remonte un peu le tout */
-    gap: 20px;              /* On laisse respirer entre les deux boîtes */
+    flex-direction: column;
+    align-items: center;    
+    padding-top: 5rem;      
+    gap: 20px;             
   }
 
   .hero-text, .hero-form {
-    max-width: 90%;        /* Les boîtes prennent presque toute la largeur */
-    margin-left: 0;        /* On enlève tes décalages de "margin" */
+    max-width: 90%;        
+    margin-left: 0;       
     margin-top: 0;
-    padding: 30px;         /* On réduit un peu le padding interne */
+    padding: 30px;       
   }
 
   h1 {
-    font-size: 1.5rem;     /* On réduit la taille du titre */
+    font-size: 1.5rem;   
   }
 }
 </style>
