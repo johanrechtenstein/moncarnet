@@ -1,42 +1,50 @@
-FROM php:8.4-apache
+# 1. Utilisation de l'image PHP officielle avec Apache
+FROM php:8.2-apache
 
+# 2. Installation des dépendances système nécessaires
 RUN apt-get update && apt-get install -y \
-    libpq-dev libzip-dev unzip git \
-    && docker-php-ext-install pdo pdo_pgsql zip
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    zip \
+    unzip \
+    git \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd pdo pdo_mysql
 
-RUN a2enmod rewrite headers
+# 3. Activation du module rewrite d'Apache (Crucial pour les routes Laravel)
+RUN a2enmod rewrite
 
-RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
-        /etc/apache2/sites-available/000-default.conf
+# 4. Configuration du DocumentRoot d'Apache vers le dossier /public de Laravel
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/conf-available/docker-php.conf!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/conf-available/*.conf
 
-RUN echo '<Directory /var/www/html/public>\n\
-    Options Indexes FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>' >> /etc/apache2/apache2.conf
+# 5. Installation de Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# 6. Définition du répertoire de travail
+WORKDIR /var/www/html
 
+# 7. ÉTAPE PRO : Copie des fichiers composer en premier pour le cache
 COPY composer.json composer.lock /var/www/html/
-RUN cd /var/www/html && composer install --no-dev --optimize-autoloader
 
+# 8. Installation des dépendances SANS les scripts (évite l'erreur "artisan not found")
+RUN composer install --no-dev --no-scripts --optimize-autoloader
+
+# 9. Copie de TOUT le reste du projet dans le conteneur
 COPY . /var/www/html
 
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# 10. Maintenant que les fichiers sont là, on génère l'autoload et les scripts
+RUN composer dump-autoload --optimize --no-dev && \
+    php artisan package:discover --ansi
 
-RUN printf '#!/bin/bash\n\
-set -e\n\
-cd /var/www/html\n\
-php artisan config:clear\n\
-php artisan cache:clear\n\
-php artisan route:clear\n\
-php artisan view:clear\n\
-php artisan storage:link\n\
-php artisan migrate --force\n\
-apache2-foreground\n' > /usr/local/bin/start-app.sh
+# 11. Réglage des permissions pour Laravel (Storage et Cache)
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-RUN chmod +x /usr/local/bin/start-app.sh
-
+# 12. Exposition du port 80
 EXPOSE 80
 
-CMD ["/usr/local/bin/start-app.sh"]
+# 13. Lancement d'Apache en premier plan
+CMD ["apache2-foreground"]
