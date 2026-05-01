@@ -7,7 +7,7 @@
        <form @submit.prevent="handleRegister">
         <div class="input-group">
           <label>Pseudo</label>
-          <input type="text" v-model="form.pseudo" pattern="^[a-zA-Z0-9_]+$" placeholder="Seuls les lettres, chiffres et underscores sont autorisés"
+          <input type="text" v-model="form.pseudo" autocomplete="username" pattern="^[a-zA-Z0-9_]+$" placeholder="Seuls les lettres, chiffres et underscores sont autorisés"
           @blur="verifyPseudo">
           <span v-if="pseudoStatus === 'taken'" class="error-text">Ce pseudo est déjà utilisé.</span>
           <span v-if="pseudoStatus === 'available'" class="success-text">Pseudo disponible !</span>
@@ -15,18 +15,18 @@
 
        <div class="input-group">
           <label>Email</label>
-          <input type="email" v-model="form.email" @blur="verifyEmail" placeholder="exemple@mail.com">
+          <input type="email" v-model="form.email" autocomplete="email" @blur="verifyEmail" placeholder="exemple@mail.com">
           <span v-if="emailStatus === 'taken'" class="error-text">Cet email est déjà inscrit.</span>
         </div>
 
         <div class="input-group">
           <label>Mot de passe</label>
-          <input type="password" v-model="form.password" required minlength="8" placeholder="••••••••">
+          <input type="password" v-model="form.password" autocomplete="new-password" required minlength="8" placeholder="••••••••">
         </div>
 
         <div class="input-group">
           <label>Confirmation</label>
-          <input type="password" v-model="form.password_confirmation" required placeholder="••••••••">
+          <input type="password" v-model="form.password_confirmation" autocomplete="new-password" required placeholder="••••••••">
         </div>
 
         <button type="submit" class="btn-register" :disabled="loading">

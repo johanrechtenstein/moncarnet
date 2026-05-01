@@ -12,6 +12,7 @@
           v-model="email" 
           type="email" 
           placeholder="votre@email.com" 
+          autocomplete="email"
           :disabled="loading"
         />
       </div>

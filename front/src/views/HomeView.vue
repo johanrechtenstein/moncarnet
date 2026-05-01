@@ -8,11 +8,11 @@
     <form @submit.prevent="login" class="hero-form">
       <div class="form-group">
         <label>Pseudo :</label>
-        <input v-model="pseudo" type="text" placeholder="Pseudo" />
+        <input v-model="pseudo" type="text" placeholder="Pseudo"  autocomplete="username" />
       </div>
       <div class="form-group">
         <label>Mot de passe :</label>
-        <input v-model="password" type="password" placeholder="••••••••" />
+        <input v-model="password" type="password" placeholder="••••••••" autocomplete="current-password" />
         <div class="forgot-password-container">
         <span @click="router.push('/forgot-password')" class="link-orange">
         Mot de passe oublié ?
