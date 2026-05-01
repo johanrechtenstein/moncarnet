@@ -2,8 +2,8 @@ import axios from 'axios';
 
 // On crée une instance personnalisée
 const api = axios.create({
-    baseURL: 'http://localhost:8000/api', // L'URL de ton Laravel
-    timeout: 5000, // Sécurité : on abandonne après 5s si le serveur ne répond pas
+    baseURL: import.meta.env.VITE_API_URL, // L'URL de ton Laravel
+    timeout: 60000, // Sécurité : on abandonne après 5s si le serveur ne répond pas
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'

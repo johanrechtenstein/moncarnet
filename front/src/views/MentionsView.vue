@@ -17,10 +17,11 @@
 
           <div class="info-block">
             <h3>Hébergement</h3>
-            <p>Le site est hébergé par : (en attente d'hébergeur)</p>
+            <p>Le site est hébergé par :</p>
             <ul>
-              <li><strong>Nom :</strong> [Ex: Hostinger, OVH, Vercel]</li>
-              <li><strong>Adresse :</strong> [Adresse physique de l'hébergeur]</li>
+              <li><strong>Front-End:</strong> Vercel</li>
+              <li><strong>Back-End:</strong> Render</li>
+              <li><strong>Base de Données:</strong> Neon</li>
             </ul>
           </div>
         </section>
@@ -110,7 +111,7 @@
 
 h1 {
   text-align: center;
-  color: #FF6B35; /* Ton orange pour le titre principal */
+  color: #FF6B35; 
   margin-bottom: 30px;
   text-transform: uppercase;
 }

@@ -2,7 +2,7 @@
   <nav class="navbar">
     <div class="logo">
       <router-link :to="isLoggedIn ? '/garage' : '/'">  <!-- expression ternaire -->
-        <img src="../assets/logo2.png" alt="Logo MG" class="logo-img">
+        <img src="../assets/logo2.webp" alt="Logo MG" class="logo-img">
       </router-link>
     </div>
 
@@ -30,8 +30,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import axios from 'axios'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import api from '../services/api'
 import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
@@ -57,22 +57,12 @@ const handleRegisterClick = () => {
   closeMenu()
   emit('open-register')
 }
-
-
-// 1. On vérifie au chargement initial
-onMounted(() => {
-  checkLoginStatus()
-})
-
-
 const handleLogout = async () => {
   closeMenu()
-  
   try {
-    const token = localStorage.getItem('user-token')
-    
+    const token = localStorage.getItem('user-token') 
     // On prévient l'API Laravel qu'on se déconnecte
-    await axios.post('http://127.0.0.1:8000/api/logout', {}, {
+    await api.post('/api/logout', {}, {
       headers: { Authorization: `Bearer ${token}` }
     })
   } catch (error) {
@@ -89,6 +79,16 @@ const handleLogout = async () => {
 watch(() => route.path, () => {
   checkLoginStatus()
   closeMenu()
+})
+
+// 1. On vérifie au chargement initial
+// On écoute aussi les événements de storage (si tu ouvres 2 onglets)
+onMounted(() => {
+  checkLoginStatus()
+  window.addEventListener('storage', checkLoginStatus)
+})
+onUnmounted(() => {
+  window.removeEventListener('storage', checkLoginStatus)
 })
 </script>
 
@@ -116,8 +116,8 @@ watch(() => route.path, () => {
 }
 
 .logo-img {
-  height: 50px; /* Ajuste la hauteur selon tes envies */
-  width: auto;  /* Garde les proportions */
+  height: 49px; /* Ajuste la hauteur selon tes envies */
+  width: 60px;  /* Garde les proportions */
   display: block;
 }
 .nav-links {
@@ -142,7 +142,7 @@ watch(() => route.path, () => {
 .btn-inscription {
   /* Fond orange saumon, texte noir */
   background-color: #FF6B35; 
-  color: white;
+  color: #1A1A1A;
   
   border: none;
   padding: 12px 28px; /* Un bouton un peu plus grand */

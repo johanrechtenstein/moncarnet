@@ -1,7 +1,7 @@
 <template>
   <div class="hero-container">
     <div class="hero-form">
-      <h2>Récupération</h2>
+      <h1>Récupération de mot de passe</h1>
       <p class="instruction">
         Entrez votre adresse e-mail pour recevoir un lien de réinitialisation.
       </p>
@@ -35,7 +35,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import api from '../services/api'
 import { useRouter } from 'vue-router'
 
 const email = ref('')
@@ -56,7 +56,7 @@ const sendResetLink = async () => {
 
   try {
     // Appel à la route qu'on a créée dans Laravel
-    const response = await axios.post('http://127.0.0.1:8000/api/forgot-password', {
+    const response = await api.post('/api/forgot-password', {
       email: email.value
     });
 
@@ -96,8 +96,8 @@ const sendResetLink = async () => {
   text-align: center;
 }
 
-h2 {
-  color: #FF6B35;
+.hero-form h1 {
+  color: #ffffff;
   margin: 0;
 }
 
@@ -123,7 +123,7 @@ input {
 
 .btn-connexion {
   background-color: #FF6B35;
-  color: white;
+  color: #1A1A1A;
   border: none;
   padding: 15px;
   border-radius: 30px;

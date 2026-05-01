@@ -10,9 +10,9 @@
 
 <style scoped>
 .site-footer {
-  margin-top: auto; /* MAGIQUE : Ça pousse le footer tout en bas ! */
+  margin-top: auto; 
  background: linear-gradient(
-    to top,            /* Direction du dégradé (du haut vers le bas) */
+    to top,           
     rgba(0, 0, 0, 1) 80%,   
     rgba(0, 0, 0, 0) 100% 
   );

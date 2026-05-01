@@ -4,15 +4,19 @@
       <button class="close-btn" @click="close">×</button>
       <h2>Créer un compte</h2>
       
-      <form @submit.prevent="handleRegister">
+       <form @submit.prevent="handleRegister">
         <div class="input-group">
           <label>Pseudo</label>
-          <input type="text" v-model="form.pseudo" required placeholder="Ton pseudo">
+          <input type="text" v-model="form.pseudo" pattern="^[a-zA-Z0-9_]+$" placeholder="Seuls les lettres, chiffres et underscores sont autorisés"
+          @blur="verifyPseudo">
+          <span v-if="pseudoStatus === 'taken'" class="error-text">Ce pseudo est déjà utilisé.</span>
+          <span v-if="pseudoStatus === 'available'" class="success-text">Pseudo disponible !</span>
         </div>
 
-        <div class="input-group">
+       <div class="input-group">
           <label>Email</label>
-          <input type="email" v-model="form.email" required placeholder="exemple@mail.com">
+          <input type="email" v-model="form.email" @blur="verifyEmail" placeholder="exemple@mail.com">
+          <span v-if="emailStatus === 'taken'" class="error-text">Cet email est déjà inscrit.</span>
         </div>
 
         <div class="input-group">
@@ -34,20 +38,34 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import axios from 'axios'
+import { reactive, ref, computed } from 'vue'
+import api from '../services/api'
 import { useRouter } from 'vue-router'
 
 const props = defineProps(['isOpen'])
 const emit = defineEmits(['close'])
 const router = useRouter()
 const loading = ref(false)
+const emailStatus = ref('') // 'taken' ou 'available'
+const pseudoStatus = ref('')
+let debounceTimer = null; // vérify pseudo: Déclare le timer en haut de ton <script setup>
 
 const form = reactive({
   pseudo: '',
   email: '',
   password: '',
   password_confirmation: ''
+})
+
+const isFormValid = computed(() => {
+  return (
+    form.pseudo.length >= 3 &&
+    form.email.includes('@') &&
+    form.password.length >= 8 &&
+    form.password === form.password_confirmation &&
+    pseudoStatus.value !== 'taken' &&
+    emailStatus.value !== 'taken'
+  )
 })
 
 const close = () => {
@@ -61,13 +79,41 @@ const resetForm = () => {
   form.email = ''
   form.password = ''
   form.password_confirmation = ''
+  pseudoStatus.value = ''
+  emailStatus.value = ''
+}
+
+// 2. Modifie la fonction
+const verifyPseudo = () => {
+  clearTimeout(debounceTimer);
+  if (form.pseudo.length < 3) {
+    pseudoStatus.value = '';
+    return;
+  }
+  debounceTimer = setTimeout(async () => {
+    try {
+      const response = await api.post('/api/check-pseudo', { 
+        pseudo: form.pseudo 
+      });
+      pseudoStatus.value = response.data.exists ? 'taken' : 'available';
+    } catch (e) {
+      console.error("Erreur check pseudo", e);
+    }
+  }, 500); // 500ms de délai
+};
+
+const verifyEmail = async () => {
+    if (!form.email.includes('@')) return
+    try {
+        const response = await api.post('/api/check-email', { email: form.email })
+        emailStatus.value = response.data.exists ? 'taken' : 'available'
+    } catch (e) { console.error(e) }
 }
 
 const handleRegister = async () => {
   loading.value = true
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/register', form)
-    
+    const response = await api.post('/api/register', form)
     // On stocke le token car ton backend le renvoie direct !
     localStorage.setItem('user-token', response.data.access_token)
     localStorage.setItem('user-pseudo', response.data.user.pseudo)
@@ -75,8 +121,15 @@ const handleRegister = async () => {
     close()
     router.push('/garage')
   } catch (e) {
-    alert(e.response?.data?.message || "Erreur lors de l'inscription")
-  } finally {
+    if (e.response?.data?.errors) {
+        // Au lieu d'un message générique, on prend la première erreur de validation
+        // Exemple : "L'adresse email est déjà utilisée."
+        const firstError = Object.values(e.response.data.errors)[0][0];
+        alert(firstError);
+    } else {
+        alert(e.response?.data?.message || "Erreur lors de l'inscription");
+    }
+}finally {
     loading.value = false
   }
 }
@@ -123,5 +176,19 @@ input:focus {
   width: 100%; padding: 12px; margin-top: 20px;
   background: #FF6B35; color: white; border: none;
   border-radius: 25px; font-weight: bold; cursor: pointer;
+}
+
+.error-text {
+  color: #ff4444;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: block;
+}
+
+.success-text {
+  color: #00c851;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: block;
 }
 </style>

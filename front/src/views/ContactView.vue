@@ -3,22 +3,36 @@
     <div class="contact-container">
       <div class="border-card">
       <div class="contact-card form-card">
-        <h2>Contact</h2>
+        <h1>Contact</h1>
         <form @submit.prevent="handleSubmit">
           <div class="input-group">
-            <label>Mail de réponse</label>
-            <input type="email" placeholder="Ton email..." v-model="email" required>
+            <label for="email">Mail de réponse</label>
+              <input 
+                id="email"
+                type="email" 
+                placeholder="Ton email..." 
+                v-model="email" 
+                required
+                autocomplete="email"
+              >
           </div>
           
           <div class="input-group">
-            <label>Message</label>
-            <textarea placeholder="Ton message..." v-model="message" required></textarea>
-          </div>
+           <label for="message">Message</label>
+              <textarea 
+                id="message"
+                placeholder="Ton message..." 
+                v-model="message" 
+                required
+              ></textarea>
+            </div>
           <p style="font-size: 0.8rem; opacity: 0.7; margin: 15px 0;">
-          En envoyant ce message, vous acceptez que vos données soient traitées conformément à nos 
-          <router-link to="/mentions" style="color: #FF6B35; text-decoration: underline;">mentions légales</router-link>.
+              En envoyant ce message, vous acceptez que vos données soient traitées conformément à nos 
+              <router-link to="/mentions" style="color: #FF6B35; text-decoration: underline;">mentions légales</router-link>.
           </p>
-          <button type="submit" class="btn-send">Envoyer</button>
+          <button type="submit" class="btn-send" :disabled="loading">
+           {{ loading ? 'Envoi...' : 'Envoyer' }}
+          </button>
         </form>
       </div>
       </div>
@@ -27,8 +41,8 @@
       <div class="contact-card text-card">
         <h2>Le point de départ</h2>
         <p>
-          Passionné par la mécanique, mon problème le plus courant était d'avoir le carnet d'entretien sous la main pour le mettre à jours. 
-          Le format papier est falsifiable, salissable et ne garantie pas un entretien suivi. 
+          Passionné par la mécanique, mon problème le plus courant était d'avoir le carnet d'entretien sous la main pour le mettre à jour. 
+          Le format papier est falsifiable, salissable et ne garantit pas un entretien suivi. 
         </p>
         <h2>Ma solution</h2>
         <p>
@@ -43,10 +57,11 @@
 
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import api from '../services/api'
 
 const email = ref('')
 const message = ref('')
+const loading = ref(false)
 
 const handleSubmit = async () => {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,20 +71,23 @@ const handleSubmit = async () => {
     return; // On arrête tout ici
   }
 
-  if (message.value.length < 10) {
-    alert("Le message est un peu court, non ? (10 caractères min.)");
+  if (message.value.trim().length < 10) {
+    alert("Le message est un peu court, 10 caractères min.");
     return;
   }
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/contact', {
+    loading.value = true
+    const response = await api.post('/api/contact', {
       email: email.value,
       message: message.value
     });
-    alert("C'est parti ! Message envoyé.");
+    alert("Message envoyé.");
     email.value = '';
     message.value = '';
   } catch (e) {
     alert("Erreur : " + (e.response?.data?.message || "Vérifie tes champs"));
+  }finally {
+    loading.value = false
   }
 }
 </script>
@@ -116,7 +134,7 @@ const handleSubmit = async () => {
 }
 
 /* --- SECTION FORMULAIRE --- */
-.form-card h2 {
+.form-card h2, h1 {
   text-align: center;
   font-size: 2rem;
   margin-bottom: 15px;
@@ -154,7 +172,7 @@ const handleSubmit = async () => {
   width: 60%;
   margin: 20px auto 0;
   background-color: #FF6B35; /* Ton orange signature */
-  color: white;
+  color: #1a1a1a;
   border: none;
   padding: 12px;
   border-radius: 25px;

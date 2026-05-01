@@ -20,32 +20,33 @@
         </div>
       </div>
       
-      <button type="submit" class="btn-connexion">Connexion</button>
+      <button type="submit" class="btn-connexion" :disabled="loading">Connexion</button>
     </form>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import api from '../services/api'
 import { useRouter } from 'vue-router' // Pour rediriger l'utilisateur après
 
 // On crée deux variables "réactives" pour stocker ce que l'utilisateur tape
 const pseudo = ref('')
 const password = ref('')
+const loading = ref(false)
 const router = useRouter()
 
 // On crée une fonction qui sera appelée quand on clique sur le bouton
-const login = async () => {
+const login = async () =>{
+ if (!pseudo.value || !password.value) return alert("Remplis tous les champs !");
+  loading.value = true 
   try {
     // On envoie les données à l'API
     // Remplace l'URL par celle de ton backend plus tard
-    const response = await axios.post('http://127.0.0.1:8000/api/login', {
+    const response = await api.post('/api/login', {
       pseudo: pseudo.value,
       password: password.value
     });
-console.log("Voici ce que le PHP a envoyé :", response.data);
-    // Si l'API répond avec succès
     const token = response.data.access_token || response.data.token;
     if (token) {
       // On stocke le jeton de sécurité (Token) dans le navigateur
@@ -53,13 +54,13 @@ console.log("Voici ce que le PHP a envoyé :", response.data);
       localStorage.setItem('user-pseudo', pseudo.value);   
       // On redirige vers le garage (le dashboard)
       router.push('/garage'); 
-    }else {
-      // Au cas où l'API répond 200 mais sans token (peu probable mais utile pour débugger)
-      console.log("Réponse reçue mais pas de token :", response.data);
     }
-  } catch (error) {
-    console.error("Erreur de connexion :", error);
-    alert("Identifiants incorrects ou serveur injoignable.");
+    } catch (error) {
+    console.error("Erreur de connexion :", error)
+    const message = error.response?.data?.message || "Identifiants incorrects ou serveur injoignable."
+    alert(message)
+  } finally {
+    loading.value = false
   }
 }
 </script>
@@ -68,7 +69,6 @@ console.log("Voici ce que le PHP a envoyé :", response.data);
 .hero-container {
   display: flex;
   justify-content: space-evenly; /* Espace entre les deux blocs */
-  /*align-items: center;*/
   align-items: flex-start;
   padding: 0 5%;
   flex-grow: 1; /* Prend tout l'espace central entre la nav et le footer */
@@ -118,7 +118,7 @@ input {
 
 .btn-connexion {
   background-color: #FF6B35;
-  color: white;
+  color: #1A1A1A;
   border: none;
   padding: 15px;
   border-radius: 30px;
@@ -170,7 +170,7 @@ input {
     padding: 30px;         /* On réduit un peu le padding interne */
   }
 
-  h1 {
+  .hero-text h1 {
     font-size: 1.5rem;     /* On réduit la taille du titre */
   }
 }

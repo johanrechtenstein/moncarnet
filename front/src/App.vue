@@ -28,7 +28,7 @@ const showRegister = ref(false);
 
 .main-container {
   /* On pointe vers ton image dans assets */
-  background-image: url('./assets/ACM.png');
+  background-image: url('./assets/ACM.webp');
   
   /* L'image couvre tout sans se déformer */
   background-size: cover;

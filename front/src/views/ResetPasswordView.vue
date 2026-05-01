@@ -27,7 +27,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+import api from '../services/api';
 
 const route = useRoute();
 const router = useRouter();
@@ -44,7 +44,7 @@ const form = reactive({
 const handleReset = async () => {
   loading.value = true;
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/reset-password', form);
+    const response = await api.post('/api/reset-password', form);
     message.value = "Mot de passe modifié avec succès !";
     setTimeout(() => router.push('/'), 1000);
   } catch (error) {
@@ -61,7 +61,6 @@ const handleReset = async () => {
   justify-content: center;
   align-items: center;
   border-radius: 25%;
-  /* Assure-toi que le nom de l'image est le bon */
   background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('@/assets/ton-image.jpg') no-repeat center center fixed;
   background-size: cover;
 }
@@ -117,7 +116,7 @@ button {
   width: 100%;
   padding: 14px;
   background-color: #FF6B35;
-  color: white;
+  color: #1a1a1a;
   border: none;
   border-radius: 8px;
   cursor: pointer;

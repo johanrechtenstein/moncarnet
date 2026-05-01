@@ -12,7 +12,7 @@
         <div class="info-group">
   <div class="label-header">
     <label>E-mail</label>
-    <button @click="isEditingEmail = !isEditingEmail" class="btn-edit-small">
+    <button @click="isEditingEmail ? isEditingEmail = false : startEditingEmail()" class="btn-edit-small">
       {{ isEditingEmail ? 'annuler' : 'modifier mon email' }}
     </button>
   </div>
@@ -40,25 +40,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import axios from 'axios'
+import { ref, onMounted } from 'vue'
+import api from '../services/api'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const user = ref({ pseudo: '', email: '' })
 const isEditingEmail = ref(false);
 const emailForm = ref({ email: '' });
-
-
-
-
-
-
 // Charger les infos de l'utilisateur connecté
 const fetchUserProfile = async () => {
   try {
     const token = localStorage.getItem('user-token')
-    const res = await axios.get('http://127.0.0.1:8000/api/user', {
+    const res = await api.get('/api/user', {
       headers: { Authorization: `Bearer ${token}` }
     })
     user.value = res.data
@@ -70,11 +64,10 @@ const fetchUserProfile = async () => {
 // Fonction pour supprimer le compte
 const confirmDeleteAccount = async () => {
   const password = prompt("Pour confirmer la suppression de votre compte, veuillez saisir votre mot de passe :");
-  
   if (password) {
     try {
       const token = localStorage.getItem('user-token')
-      await axios.delete('http://127.0.0.1:8000/api/user', {
+      await api.delete('/api/user', {
       // Le 2ème argument contient TOUT
       headers: { 
       Authorization: `Bearer ${token}` 
@@ -83,7 +76,6 @@ const confirmDeleteAccount = async () => {
       password: password // On met le body ici pour un DELETE
       }
       })
-
       localStorage.removeItem('user-token')
       // Optionnel : localStorage.removeItem('user-pseudo')
       router.push('/')
@@ -101,11 +93,10 @@ const requestPasswordReset = async () => {
     const token = localStorage.getItem('user-token');
     
     // On appelle ton API Laravel
-    const response = await axios.post('http://127.0.0.1:8000/api/password/email', 
+    const response = await api.post('/api/password/email', 
       { email: user.value.email },
       { headers: { Authorization: `Bearer ${token}` } }
-    );
-    
+    ); 
     alert(response.data.message);
   } catch (e) {
     console.error(e);
@@ -115,19 +106,18 @@ const requestPasswordReset = async () => {
 
 onMounted(fetchUserProfile)
 
-
-// Quand on ouvre la modif, on remplit avec l'actuel
-watch(isEditingEmail, (val) => {
-  if(val) emailForm.value.email = user.value.email;
-});
+// Plus simple qu'un watch : on pré-remplit ici
+const startEditingEmail = () => {
+  emailForm.value.email = user.value.email
+  isEditingEmail.value = true
+}
 
 const updateEmail = async () => {
   try {
     const token = localStorage.getItem('user-token');
-    await axios.put('http://127.0.0.1:8000/api/user', emailForm.value, {
+    await api.put('/api/user', emailForm.value, {
       headers: { Authorization: `Bearer ${token}` }
-    });
-    
+    }); 
     user.value.email = emailForm.value.email;
     isEditingEmail.value = false;
     alert("Email mis à jour !");
