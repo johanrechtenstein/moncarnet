@@ -10,27 +10,57 @@ use Illuminate\Support\Facades\Auth; // Pour gérer l'authentification
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use App\Mail\ContactMessage; 
-use Illuminate\Support\Facades\Mail;
+// use App\Mail\ContactMessage; 
+// use Illuminate\Support\Facades\Mail;
 
 
 class AuthController extends Controller
 {
     
 
-    public function sendContact(Request $request) 
+//     public function sendContact(Request $request) 
+// {
+//     $data = $request->validate([
+//         'email'   => 'required|email:rfc,dns',
+//         'message' => 'required|string|min:10',
+//     ]);
+
+//     // On utilise la classe que tu as créée
+//     Mail::to('maxitunnig67@gmail.com')->send(new ContactMessage($data));
+
+//     return response()->json(['message' => 'Message envoyé avec succès !']);
+// }
+
+
+public function sendContact(Request $request)
 {
     $data = $request->validate([
         'email'   => 'required|email:rfc,dns',
         'message' => 'required|string|min:10',
     ]);
 
-    // On utilise la classe que tu as créée
-    Mail::to('maxitunnig67@gmail.com')->send(new ContactMessage($data));
+    $brevo = new \App\Services\BrevoMailService();
+
+    $html = "
+        <h2>Nouveau message de contact</h2>
+        <p><strong>De :</strong> {$data['email']}</p>
+        <p><strong>Message :</strong></p>
+        <p>{$data['message']}</p>
+    ";
+
+    $sent = $brevo->send(
+        'maxitunnig67@gmail.com',
+        'Mon Garage',
+        'Nouveau message de contact',
+        $html
+    );
+
+    if (!$sent) {
+        return response()->json(['message' => 'Erreur lors de l\'envoi.'], 500);
+    }
 
     return response()->json(['message' => 'Message envoyé avec succès !']);
 }
-
 
     public function resetPassword(Request $request)
 {
@@ -192,20 +222,57 @@ public function checkPseudo(Request $request)
     return response()->json(['exists' => $exists]);
 }
 
+// public function sendResetLinkEmail(Request $request)
+// {
+//     // On valide que l'email est fourni
+//     $request->validate(['email' => 'required|email']);
+
+//     // On demande à Laravel d'envoyer le lien de réinitialisation
+//     $status = Password::broker()->sendResetLink(
+//         $request->only('email')
+//     );
+
+//     // Si tout est bon, Laravel renvoie un code de succès
+//     return $status === Password::RESET_LINK_SENT
+//         ? response()->json(['message' => 'Lien de réinitialisation envoyé ! Vérifiez votre boîte mail.'])
+//         : response()->json(['message' => 'Impossible d\'envoyer le mail.'], 400);
+// }
 public function sendResetLinkEmail(Request $request)
 {
-    // On valide que l'email est fourni
     $request->validate(['email' => 'required|email']);
 
-    // On demande à Laravel d'envoyer le lien de réinitialisation
-    $status = Password::broker()->sendResetLink(
-        $request->only('email')
+    $user = \App\Models\User::where('email', $request->email)->first();
+
+    // On ne révèle pas si l'email existe ou non (sécurité)
+    if (!$user) {
+        return response()->json(['message' => 'Lien de réinitialisation envoyé si l\'email existe.']);
+    }
+
+    // Génération du token natif Laravel
+    $token = app('auth.password.broker')->createToken($user);
+
+    $resetUrl = env('FRONTEND_URL') . '/reset-password/' . $token . '?email=' . urlencode($user->email);
+
+    $brevo = new \App\Services\BrevoMailService();
+
+    $html = "
+        <h2>Réinitialisation de votre mot de passe</h2>
+        <p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :</p>
+        <a href='{$resetUrl}' style='padding:10px 20px; background:#1a73e8; color:white; border-radius:5px; text-decoration:none;'>
+            Réinitialiser mon mot de passe
+        </a>
+        <p>Ce lien expire dans 60 minutes.</p>
+        <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+    ";
+
+    $brevo->send(
+        $user->email,
+        $user->pseudo,
+        'Réinitialisation de votre mot de passe - Mon Garage',
+        $html
     );
 
-    // Si tout est bon, Laravel renvoie un code de succès
-    return $status === Password::RESET_LINK_SENT
-        ? response()->json(['message' => 'Lien de réinitialisation envoyé ! Vérifiez votre boîte mail.'])
-        : response()->json(['message' => 'Impossible d\'envoyer le mail.'], 400);
+    return response()->json(['message' => 'Lien de réinitialisation envoyé si l\'email existe.']);
 }
 
 }
